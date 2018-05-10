@@ -5,14 +5,14 @@ import "testing"
 func TestKo(t *testing.T) {
 	history := History([]Board{
 		Board([][]Stone{
-			[]Stone{EmptyStone, BlackStone, WhiteStone},
-			[]Stone{EmptyStone, WhiteStone, EmptyStone},
-			[]Stone{EmptyStone, EmptyStone, WhiteStone},
+			{EmptyStone, BlackStone, WhiteStone},
+			{EmptyStone, WhiteStone, EmptyStone},
+			{EmptyStone, EmptyStone, WhiteStone},
 		}),
 		Board([][]Stone{
-			[]Stone{EmptyStone, BlackStone, EmptyStone},
-			[]Stone{EmptyStone, WhiteStone, BlackStone},
-			[]Stone{EmptyStone, EmptyStone, WhiteStone},
+			{EmptyStone, BlackStone, EmptyStone},
+			{EmptyStone, WhiteStone, BlackStone},
+			{EmptyStone, EmptyStone, WhiteStone},
 		}),
 	})
 
@@ -23,24 +23,24 @@ func TestKo(t *testing.T) {
 	}{
 		{
 			Board([][]Stone{
-				[]Stone{EmptyStone, BlackStone},
-				[]Stone{EmptyStone, EmptyStone},
+				{EmptyStone, BlackStone},
+				{EmptyStone, EmptyStone},
 			}),
 			History([]Board{}),
 			false,
 		}, {
 			Board([][]Stone{
-				[]Stone{EmptyStone, BlackStone, WhiteStone},
-				[]Stone{EmptyStone, WhiteStone, EmptyStone},
-				[]Stone{EmptyStone, EmptyStone, WhiteStone},
+				{EmptyStone, BlackStone, WhiteStone},
+				{EmptyStone, WhiteStone, EmptyStone},
+				{EmptyStone, EmptyStone, WhiteStone},
 			}),
 			history,
 			true,
 		}, {
 			Board([][]Stone{
-				[]Stone{EmptyStone, BlackStone, EmptyStone},
-				[]Stone{EmptyStone, WhiteStone, BlackStone},
-				[]Stone{EmptyStone, WhiteStone, WhiteStone},
+				{EmptyStone, BlackStone, EmptyStone},
+				{EmptyStone, WhiteStone, BlackStone},
+				{EmptyStone, WhiteStone, WhiteStone},
 			}),
 			history,
 			false,

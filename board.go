@@ -147,14 +147,14 @@ func (b Board) Capture(x, y int) (Board, int) {
 func (b Board) Play(x, y int, stone Stone) (Board, int, error) {
 	// Build a map of (x, y) -> nearest 4 neighbors
 	neighbors := map[int]map[int]Stone{
-		x: map[int]Stone{
+		x: {
 			y - 1: b.Get(x, y-1),
 			y + 1: b.Get(x, y+1),
 		},
-		x + 1: map[int]Stone{
+		x + 1: {
 			y: b.Get(x+1, y),
 		},
-		x - 1: map[int]Stone{
+		x - 1: {
 			y: b.Get(x-1, y),
 		},
 	}

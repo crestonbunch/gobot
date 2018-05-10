@@ -19,6 +19,15 @@ Run
 
     go run ./slack/main.go
 
+Develop
+-----
+
+Install [pre-commit-go](https://github.com/maruel/pre-commit-go)
+
+    go get github.com/maruel/pre-commit-go/cmd/...
+
+and make sure `pcb` is in your path
+
 Todo
 ----
 

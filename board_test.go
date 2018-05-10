@@ -26,8 +26,8 @@ func TestBoardSizes(t *testing.T) {
 
 func TestBoardGet(t *testing.T) {
 	board := Board([][]Stone{
-		[]Stone{EmptyStone, EmptyStone},
-		[]Stone{BlackStone, WhiteStone},
+		{EmptyStone, EmptyStone},
+		{BlackStone, WhiteStone},
 	})
 
 	cases := []struct {
@@ -59,8 +59,8 @@ func TestBoardGet(t *testing.T) {
 
 func TestBoardSet(t *testing.T) {
 	board := Board([][]Stone{
-		[]Stone{WhiteStone, BlackStone},
-		[]Stone{EmptyStone, EmptyStone},
+		{WhiteStone, BlackStone},
+		{EmptyStone, EmptyStone},
 	})
 
 	cases := []struct {
@@ -70,36 +70,36 @@ func TestBoardSet(t *testing.T) {
 		expect Board
 	}{
 		{0, 0, EmptyStone, Board([][]Stone{
-			[]Stone{EmptyStone, BlackStone},
-			[]Stone{EmptyStone, EmptyStone},
+			{EmptyStone, BlackStone},
+			{EmptyStone, EmptyStone},
 		})},
 		{0, 1, BlackStone, Board([][]Stone{
-			[]Stone{WhiteStone, BlackStone},
-			[]Stone{BlackStone, EmptyStone},
+			{WhiteStone, BlackStone},
+			{BlackStone, EmptyStone},
 		})},
 		{1, 0, EmptyStone, Board([][]Stone{
-			[]Stone{WhiteStone, EmptyStone},
-			[]Stone{EmptyStone, EmptyStone},
+			{WhiteStone, EmptyStone},
+			{EmptyStone, EmptyStone},
 		})},
 		{1, 1, WhiteStone, Board([][]Stone{
-			[]Stone{WhiteStone, BlackStone},
-			[]Stone{EmptyStone, WhiteStone},
+			{WhiteStone, BlackStone},
+			{EmptyStone, WhiteStone},
 		})},
 		{-1, 0, WhiteStone, Board([][]Stone{
-			[]Stone{WhiteStone, BlackStone},
-			[]Stone{EmptyStone, EmptyStone},
+			{WhiteStone, BlackStone},
+			{EmptyStone, EmptyStone},
 		})},
 		{0, -1, WhiteStone, Board([][]Stone{
-			[]Stone{WhiteStone, BlackStone},
-			[]Stone{EmptyStone, EmptyStone},
+			{WhiteStone, BlackStone},
+			{EmptyStone, EmptyStone},
 		})},
 		{3, 0, WhiteStone, Board([][]Stone{
-			[]Stone{WhiteStone, BlackStone},
-			[]Stone{EmptyStone, EmptyStone},
+			{WhiteStone, BlackStone},
+			{EmptyStone, EmptyStone},
 		})},
 		{0, 3, WhiteStone, Board([][]Stone{
-			[]Stone{WhiteStone, BlackStone},
-			[]Stone{EmptyStone, EmptyStone},
+			{WhiteStone, BlackStone},
+			{EmptyStone, EmptyStone},
 		})},
 	}
 
@@ -125,8 +125,8 @@ func TestBoardSet(t *testing.T) {
 
 func TestBoardEquals(t *testing.T) {
 	board := Board([][]Stone{
-		[]Stone{WhiteStone, BlackStone},
-		[]Stone{EmptyStone, EmptyStone},
+		{WhiteStone, BlackStone},
+		{EmptyStone, EmptyStone},
 	})
 
 	cases := []struct {
@@ -135,28 +135,28 @@ func TestBoardEquals(t *testing.T) {
 	}{
 		{
 			Board([][]Stone{
-				[]Stone{WhiteStone, BlackStone},
-				[]Stone{EmptyStone, EmptyStone},
+				{WhiteStone, BlackStone},
+				{EmptyStone, EmptyStone},
 			}),
 			true,
 		},
 		{
 			Board([][]Stone{
-				[]Stone{BlackStone, BlackStone},
-				[]Stone{EmptyStone, EmptyStone},
+				{BlackStone, BlackStone},
+				{EmptyStone, EmptyStone},
 			}),
 			false,
 		},
 		{
 			Board([][]Stone{
-				[]Stone{WhiteStone, BlackStone},
+				{WhiteStone, BlackStone},
 			}),
 			false,
 		},
 		{
 			Board([][]Stone{
-				[]Stone{WhiteStone, BlackStone},
-				[]Stone{EmptyStone},
+				{WhiteStone, BlackStone},
+				{EmptyStone},
 			}),
 			false,
 		},
@@ -180,37 +180,37 @@ func TestBoardLiberties(t *testing.T) {
 	}{
 		{
 			Board([][]Stone{
-				[]Stone{WhiteStone, BlackStone},
-				[]Stone{EmptyStone, EmptyStone},
+				{WhiteStone, BlackStone},
+				{EmptyStone, EmptyStone},
 			}),
 			0, 0, 1,
 		},
 		{
 			Board([][]Stone{
-				[]Stone{WhiteStone, BlackStone},
-				[]Stone{EmptyStone, EmptyStone},
+				{WhiteStone, BlackStone},
+				{EmptyStone, EmptyStone},
 			}),
 			1, 0, 1,
 		},
 		{
 			Board([][]Stone{
-				[]Stone{WhiteStone, BlackStone},
-				[]Stone{EmptyStone, BlackStone},
+				{WhiteStone, BlackStone},
+				{EmptyStone, BlackStone},
 			}),
 			1, 0, 1,
 		},
 		{
 			Board([][]Stone{
-				[]Stone{WhiteStone, BlackStone},
-				[]Stone{WhiteStone, BlackStone},
+				{WhiteStone, BlackStone},
+				{WhiteStone, BlackStone},
 			}),
 			1, 0, 0,
 		},
 		{
 			Board([][]Stone{
-				[]Stone{BlackStone, BlackStone, EmptyStone},
-				[]Stone{BlackStone, BlackStone, BlackStone},
-				[]Stone{EmptyStone, BlackStone, BlackStone},
+				{BlackStone, BlackStone, EmptyStone},
+				{BlackStone, BlackStone, BlackStone},
+				{EmptyStone, BlackStone, BlackStone},
 			}),
 			1, 1, 2,
 		},
@@ -237,26 +237,26 @@ func TestBoardCapture(t *testing.T) {
 	}{
 		{
 			Board([][]Stone{
-				[]Stone{WhiteStone, BlackStone},
-				[]Stone{EmptyStone, EmptyStone},
+				{WhiteStone, BlackStone},
+				{EmptyStone, EmptyStone},
 			}),
 			0, 0,
 			Board([][]Stone{
-				[]Stone{EmptyStone, BlackStone},
-				[]Stone{EmptyStone, EmptyStone},
+				{EmptyStone, BlackStone},
+				{EmptyStone, EmptyStone},
 			}),
 			1,
 		}, {
 			Board([][]Stone{
-				[]Stone{WhiteStone, BlackStone, EmptyStone},
-				[]Stone{WhiteStone, WhiteStone, BlackStone},
-				[]Stone{WhiteStone, WhiteStone, WhiteStone},
+				{WhiteStone, BlackStone, EmptyStone},
+				{WhiteStone, WhiteStone, BlackStone},
+				{WhiteStone, WhiteStone, WhiteStone},
 			}),
 			1, 1,
 			Board([][]Stone{
-				[]Stone{EmptyStone, BlackStone, EmptyStone},
-				[]Stone{EmptyStone, EmptyStone, BlackStone},
-				[]Stone{EmptyStone, EmptyStone, EmptyStone},
+				{EmptyStone, BlackStone, EmptyStone},
+				{EmptyStone, EmptyStone, BlackStone},
+				{EmptyStone, EmptyStone, EmptyStone},
 			}),
 			6,
 		},
@@ -290,28 +290,28 @@ func TestBoardPlay(t *testing.T) {
 	}{
 		{
 			Board([][]Stone{
-				[]Stone{WhiteStone, BlackStone, EmptyStone},
-				[]Stone{WhiteStone, WhiteStone, BlackStone},
-				[]Stone{WhiteStone, WhiteStone, WhiteStone},
+				{WhiteStone, BlackStone, EmptyStone},
+				{WhiteStone, WhiteStone, BlackStone},
+				{WhiteStone, WhiteStone, WhiteStone},
 			}),
 			nil, 0, 0, WhiteStone, 0, true,
 		}, {
 			Board([][]Stone{
-				[]Stone{EmptyStone, BlackStone, EmptyStone},
-				[]Stone{BlackStone, EmptyStone, BlackStone},
-				[]Stone{WhiteStone, WhiteStone, WhiteStone},
+				{EmptyStone, BlackStone, EmptyStone},
+				{BlackStone, EmptyStone, BlackStone},
+				{WhiteStone, WhiteStone, WhiteStone},
 			}),
 			nil, 0, 0, WhiteStone, 0, true,
 		}, {
 			Board([][]Stone{
-				[]Stone{WhiteStone, BlackStone, EmptyStone},
-				[]Stone{WhiteStone, WhiteStone, BlackStone},
-				[]Stone{WhiteStone, WhiteStone, WhiteStone},
+				{WhiteStone, BlackStone, EmptyStone},
+				{WhiteStone, WhiteStone, BlackStone},
+				{WhiteStone, WhiteStone, WhiteStone},
 			}),
 			Board([][]Stone{
-				[]Stone{WhiteStone, EmptyStone, WhiteStone},
-				[]Stone{WhiteStone, WhiteStone, EmptyStone},
-				[]Stone{WhiteStone, WhiteStone, WhiteStone},
+				{WhiteStone, EmptyStone, WhiteStone},
+				{WhiteStone, WhiteStone, EmptyStone},
+				{WhiteStone, WhiteStone, WhiteStone},
 			}),
 			2, 0, WhiteStone, 2, false,
 		},
