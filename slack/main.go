@@ -16,22 +16,38 @@ func main() {
 	logger := log.New(os.Stdout, "slack-bot: ", log.Lshortfile|log.LstdFlags)
 	slack.SetLogger(logger)
 
-	bot := gobot.New()
 	api := slack.New(token)
 	api.SetDebug(true)
-
-	rtm := api.NewRTM()
-	go rtm.ManageConnection()
-
-	for msg := range rtm.IncomingEvents {
-		switch ev := msg.Data.(type) {
-		case *slack.MemberJoinedChannelEvent:
-		case *slack.MessageEvent:
-			bot.Receive(ev.Text, ev.Channel)
-		}
+	identity, err := api.AuthTest()
+	if err != nil {
+		panic(err)
 	}
 
-	for msg := range bot.OutgoingMessages {
-		api.PostMessage(msg.Channel, msg.Text, slack.PostMessageParameters{})
+	bot := gobot.New(identity.UserID)
+	rtm := api.NewRTM()
+
+	go bot.Start()
+	go rtm.ManageConnection()
+
+	go func() {
+		for msg := range rtm.IncomingEvents {
+			switch ev := msg.Data.(type) {
+			case *slack.MemberJoinedChannelEvent:
+			case *slack.MessageEvent:
+				bot.Receive(&gobot.Request{
+					Command: ev.Text,
+					Channel: ev.Channel,
+					User:    ev.User,
+				})
+			}
+		}
+	}()
+
+	for msg := range bot.Responses {
+		params := slack.PostMessageParameters{}
+		if msg.Attachment != nil {
+			params.Attachments = []slack.Attachment{*msg.Attachment}
+		}
+		api.PostMessage(msg.Channel, msg.Text, params)
 	}
 }
