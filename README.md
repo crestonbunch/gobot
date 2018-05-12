@@ -8,18 +8,22 @@ Naturally it is written in Go.
 Setup
 -----
 
+Create a [Slack bot](api.slack.com) and copy the `Bot User OAuth Access Token`
+
 Set an environment variable with your Slack API token
 
-    export SLACK_API_TOKEN=<token goes here>
+    export SLACK_API_TOKEN=<bot user oauth token goes here>
 
 Or put it in your .bash_rc file (or wherever you put env variables)
 
 Run
 -----
 
+From the project directory after cloning the repo
+
     go run ./slack/main.go
 
-Develop
+Precommit
 -----
 
 Install [pre-commit-go](https://github.com/maruel/pre-commit-go)
@@ -28,20 +32,33 @@ Install [pre-commit-go](https://github.com/maruel/pre-commit-go)
 
 and make sure `pcb` is in your path
 
-Todo
-----
+Features
+--------
 
-MVP
+### Done
 
-    * Basic commands (below)
-    * Drawing the board on the screen
-    * Persistence
 
-Future
+* `@gobot play`
+* `@gobot move`
+* `@gobot pass`
+* Encoding game state and rules
+* Rendering image
+* Communicating with slack
 
-    * Player statistics / ranking
-    * WWAGD (what would AlphaGo do?)
-    * SGF export
+### Todo
+
+* `@gobot score`
+* `@gobot show`
+* `@gobot list`
+* Vote timer
+* Persistence
+* End game
+
+Stretch goals
+
+* Player statistics / ranking
+* WWAGD (what would AlphaGo do?)
+* SGF export
 
 Talking to the Bot
 -----
@@ -57,6 +74,9 @@ Talking to the Bot
 
     With two players (black and white respectively):
     > @gobot play @goseigen @shusaku
+
+    Against yourself
+    > @gobot play @me @me
 
 3. Make a move
 
