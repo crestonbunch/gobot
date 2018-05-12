@@ -2,7 +2,6 @@ package gobot
 
 import (
 	"fmt"
-	"regexp"
 	"strconv"
 	"strings"
 )
@@ -77,12 +76,12 @@ func isInfoCommand(input string) bool {
 // ParseStartCommand parses a command that starts a new game
 func ParseStartCommand(command string) (Command, error) {
 	args := strings.Split(command, " ")
-	if len(args) < 2 {
+	if len(args) < 1 {
 		return nil, fmt.Errorf("could not understand %s", command)
 	}
-	switch args[1] {
+	switch args[0] {
 	case PlayToken:
-		return parsePlayCommand(args[2:])
+		return parsePlayCommand(args[1:])
 	default:
 		return nil, fmt.Errorf("could not understand %s", command)
 	}
@@ -92,18 +91,18 @@ func ParseStartCommand(command string) (Command, error) {
 // a game locator that can be used to find the target game.
 func ParseGameCommand(command string) (Command, *GameLocator, error) {
 	args := strings.Split(command, " ")
-	if len(args) < 2 {
+	if len(args) < 1 {
 		return nil, nil, fmt.Errorf("could not understand %s", command)
 	}
-	switch args[1] {
+	switch args[0] {
 	case MoveToken:
-		return parseMoveCommand(args[2:])
+		return parseMoveCommand(args[1:])
 	case PassToken:
-		return parsePassCommand(args[2:])
+		return parsePassCommand(args[1:])
 	case ShowToken:
-		return parseShowCommand(args[2:])
+		return parseShowCommand(args[1:])
 	case ScoreToken:
-		return parseScoreCommand(args[2:])
+		return parseScoreCommand(args[1:])
 	default:
 		return nil, nil, fmt.Errorf("could not understand %s", command)
 	}
@@ -113,39 +112,25 @@ func ParseGameCommand(command string) (Command, *GameLocator, error) {
 // list games, rank users, etc.
 func ParseInfoCommand(command string) (Command, error) {
 	args := strings.Split(command, " ")
-	if len(args) < 2 {
+	if len(args) < 1 {
 		return nil, fmt.Errorf("could not understand %s", command)
 	}
-	switch args[1] {
+	switch args[0] {
 	case ListToken:
-		return parseListCommand(args[2:])
+		return parseListCommand(args[1:])
 	default:
 		return nil, fmt.Errorf("could not understand %s", command)
 	}
-}
-
-func parseUserID(token string) (string, error) {
-	re := regexp.MustCompile("<@([^>]+)>")
-	matches := re.FindStringSubmatch(token)
-	if len(matches) < 2 {
-		return "", fmt.Errorf("%s is not a valid user", token)
-	}
-	return matches[1], nil
 }
 
 func parsePlayCommand(players []string) (*PlayCommand, error) {
 	switch len(players) {
 	// Two players only
 	case 2:
-		p1, err := parseUserID(players[0])
-		p2, err := parseUserID(players[1])
-		if err != nil {
-			return nil, err
-		}
 		return &PlayCommand{
 			Players: Players{
-				Black: []string{p1},
-				White: []string{p2},
+				Black: []string{players[0]},
+				White: []string{players[1]},
 			},
 			Settings: Settings{
 				Vote: false,

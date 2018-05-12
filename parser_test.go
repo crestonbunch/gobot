@@ -7,8 +7,8 @@ import (
 
 func TestParseBadCommands(t *testing.T) {
 	cases := []string{
-		"gobot",
-		"gobot asdf",
+		"",
+		"asdf",
 	}
 	for _, test := range cases {
 		_, _, err := ParseGameCommand(test)
@@ -33,13 +33,13 @@ func TestParsePlayCommand(t *testing.T) {
 		err     bool
 	}{
 		{
-			input: "gobot play",
+			input: "play",
 			command: &PlayCommand{
 				Players:  Players{Anyone: true},
 				Settings: Settings{Vote: true, Timer: 3600},
 			},
 		}, {
-			input: "gobot play <@USER1> <@USER2>",
+			input: "play USER1 USER2",
 			command: &PlayCommand{
 				Players: Players{
 					Black:  []string{"USER1"},
@@ -49,11 +49,7 @@ func TestParsePlayCommand(t *testing.T) {
 				Settings: Settings{},
 			},
 		}, {
-			input:   "gobot play user1 user2 user3",
-			command: nil,
-			err:     true,
-		}, {
-			input:   "gobot play user1 user2",
+			input:   "play user1 user2 user3",
 			command: nil,
 			err:     true,
 		},
@@ -90,24 +86,24 @@ func TestParseMoveCommand(t *testing.T) {
 		err     bool
 	}{
 		{
-			input: "gobot move A4",
+			input: "move A4",
 			command: &MoveCommand{
 				Coordinates: [2]int{3, 0},
 			},
 			locator: &GameLocator{Auto: true},
 		}, {
-			input: "gobot move 12 D14",
+			input: "move 12 D14",
 			command: &MoveCommand{
 				Coordinates: [2]int{13, 3},
 			},
 			locator: &GameLocator{GameID: 12},
 		}, {
-			input:   "gobot move 12 Z14",
+			input:   "move 12 Z14",
 			command: nil,
 			locator: nil,
 			err:     true,
 		}, {
-			input:   "gobot move BBZ",
+			input:   "move BBZ",
 			command: nil,
 			locator: nil,
 			err:     true,
@@ -149,15 +145,15 @@ func TestParsePassCommand(t *testing.T) {
 		err     bool
 	}{
 		{
-			input:   "gobot pass",
+			input:   "pass",
 			command: &PassCommand{},
 			locator: &GameLocator{Auto: true},
 		}, {
-			input:   "gobot pass 13",
+			input:   "pass 13",
 			command: &PassCommand{},
 			locator: &GameLocator{GameID: 13},
 		}, {
-			input:   "gobot pass A",
+			input:   "pass A",
 			command: nil,
 			locator: nil,
 			err:     true,
@@ -199,15 +195,15 @@ func TestParseShowCommand(t *testing.T) {
 		err     bool
 	}{
 		{
-			input:   "gobot show",
+			input:   "show",
 			command: &ShowCommand{},
 			locator: &GameLocator{Auto: true},
 		}, {
-			input:   "gobot show 13",
+			input:   "show 13",
 			command: &ShowCommand{},
 			locator: &GameLocator{GameID: 13},
 		}, {
-			input:   "gobot show A",
+			input:   "show A",
 			command: nil,
 			locator: nil,
 			err:     true,
@@ -250,15 +246,15 @@ func TestParseScoreCommand(t *testing.T) {
 		err     bool
 	}{
 		{
-			input:   "gobot score",
+			input:   "score",
 			command: &ScoreCommand{},
 			locator: &GameLocator{Auto: true},
 		}, {
-			input:   "gobot score 13",
+			input:   "score 13",
 			command: &ScoreCommand{},
 			locator: &GameLocator{GameID: 13},
 		}, {
-			input:   "gobot score A",
+			input:   "score A",
 			command: nil,
 			locator: nil,
 			err:     true,
@@ -300,15 +296,15 @@ func TestParseListCommand(t *testing.T) {
 		err    bool
 	}{
 		{
-			input:  "gobot list",
+			input:  "list",
 			expect: &ListCommand{},
 		}, {
-			input: "gobot list all",
+			input: "list all",
 			expect: &ListCommand{
 				All: true,
 			},
 		}, {
-			input:  "gobot list asdf",
+			input:  "list asdf",
 			expect: nil,
 			err:    true,
 		},
