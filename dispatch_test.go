@@ -1,76 +1,61 @@
 package gobot
 
 import (
+	"reflect"
 	"testing"
 )
 
-func TestMoveDispatch(t *testing.T) {
-	one := NewGame(Players{
-		Anyone: true,
-	}, Settings{})
-	two := NewGame(Players{
-		Black: []string{"bar"},
-		White: []string{"foo"},
-	}, Settings{})
+func TestDispatch(t *testing.T) {
+	voteGame := NewGame(1, Players{Anyone: true}, Settings{Vote: true})
+	moveGame := NewGame(1, Players{Anyone: true}, Settings{Vote: false})
 	cases := []struct {
-		desc   string
-		games  []*Game
-		action *Action
-		expect *Game
-		err    bool
+		desc     string
+		game     *Game
+		player   string
+		command  Command
+		response *Response
+		err      bool
 	}{
 		{
-			desc:   "latest game with two players, player 1",
-			games:  []*Game{one, two},
-			action: &Action{User: "foo", Command: &MoveCommand{GameID: -1}},
-			expect: two,
-			err:    false,
+			desc:     "vote for move",
+			game:     voteGame,
+			player:   "foo",
+			command:  &MoveCommand{Coordinates: [2]int{2, 2}},
+			response: NewTextResponse("thanks for voting"),
+			err:      false,
 		}, {
-			desc:   "single game with any players",
-			games:  []*Game{one},
-			action: &Action{User: "foo", Command: &MoveCommand{GameID: -1}},
-			expect: one,
-			err:    false,
+			desc:     "vote for pass",
+			game:     voteGame,
+			player:   "foo",
+			command:  &PassCommand{},
+			response: NewTextResponse("thanks for voting"),
+			err:      false,
 		}, {
-			desc:   "first game with any players",
-			games:  []*Game{one, two},
-			action: &Action{User: "baz", Command: &MoveCommand{GameID: -1}},
-			expect: one,
-			err:    false,
+			desc:     "move",
+			game:     moveGame,
+			player:   "foo",
+			command:  &MoveCommand{Coordinates: [2]int{2, 2}},
+			response: NewGameResponse(moveGame),
+			err:      false,
 		}, {
-			desc:   "last game with two players, player 2",
-			games:  []*Game{two, one},
-			action: &Action{User: "bar", Command: &MoveCommand{GameID: -1}},
-			expect: one,
-			err:    false,
-		}, {
-			desc:   "first game with fixed id",
-			games:  []*Game{one, two},
-			action: &Action{User: "foo", Command: &MoveCommand{GameID: 0}},
-			expect: one,
-			err:    false,
-		}, {
-			desc:   "no games with id -1",
-			games:  []*Game{},
-			action: &Action{User: "bar", Command: &MoveCommand{GameID: -1}},
-			expect: nil,
-			err:    true,
-		}, {
-			desc:   "one game with id out of bounds",
-			games:  []*Game{one},
-			action: &Action{User: "bar", Command: &MoveCommand{GameID: 2}},
-			expect: nil,
-			err:    true,
+			desc:     "not implemented",
+			game:     moveGame,
+			player:   "foo",
+			command:  &ListCommand{},
+			response: nil,
+			err:      true,
 		},
 	}
 	for _, test := range cases {
-		result, err := Dispatch(test.games, test.action)
-		if !test.err && err != nil {
-			t.Errorf("unexpected error %s for %s ", err.Error(), test.desc)
-		} else if test.err && err == nil {
-			t.Errorf("expected error for %s", test.desc)
-		} else if result != test.expect {
-			t.Errorf("wrong game selected %s", test.desc)
+		response, err := Dispatch(test.game, test.player, test.command)
+		if err != nil && !test.err {
+			t.Errorf("%s unexpected error %s", test.desc, err.Error())
+		}
+		if err == nil && test.err {
+			t.Errorf("%s expected error", test.desc)
+		}
+		if !reflect.DeepEqual(response, test.response) {
+			t.Errorf("%s wrong response", test.desc)
 		}
 	}
 }

@@ -49,6 +49,19 @@ func (b Board) Get(x, y int) Stone {
 	return row[x]
 }
 
+// Height is the height of the board
+func (b Board) Height() int {
+	return len(b)
+}
+
+// Width is the width of the board
+func (b Board) Width() int {
+	for _, row := range b {
+		return len(row)
+	}
+	return 0
+}
+
 // Copy makes a copy of the board
 func (b Board) Copy() Board {
 	rows := make([][]Stone, len(b))

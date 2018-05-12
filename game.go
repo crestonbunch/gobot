@@ -56,6 +56,7 @@ func (h History) Ko(b Board) bool {
 
 // Game stores the entire game state for a single game
 type Game struct {
+	ID        int       `json:"id"`
 	History   History   `json:"history"`
 	Next      Stone     `json:"next"`
 	Players   Players   `json:"players"`
@@ -69,8 +70,9 @@ type Game struct {
 }
 
 // NewGame creates a new game with the given players and settings
-func NewGame(players Players, settings Settings) *Game {
+func NewGame(id int, players Players, settings Settings) *Game {
 	return &Game{
+		ID:       id,
 		History:  History([]Board{New19by19Board()}),
 		Next:     BlackStone,
 		Players:  players,
@@ -135,31 +137,35 @@ func (g *Game) Authorized(user string) bool {
 	return false
 }
 
-// Validate that a move is possible
-func (g *Game) Validate(coords [2]int) bool {
+// VoteForMove sets the vote for a player's move
+func (g *Game) VoteForMove(player string, coords [2]int) error {
+	if !g.Authorized(player) {
+		return errors.New("not your turn")
+	}
 	current := g.Board()
 	next, _, err := current.Play(coords[0], coords[1], g.Next)
 	if err != nil {
-		return false
+		return err
 	}
 	if g.History.Ko(next) {
-		return false
+		return errors.New("that's a ko")
 	}
-	return true
+	g.Votes.Moves[player] = coords
+	return nil
 }
 
 // Move for a particular coordinate
-func (g *Game) Move(player string, coords [2]int) (string, error) {
+func (g *Game) Move(player string, coords [2]int) error {
 	if !g.Authorized(player) {
-		return "", errors.New("not your turn")
+		return errors.New("not your turn")
 	}
 	current := g.Board()
 	next, captures, err := current.Play(coords[0], coords[1], g.Next)
 	if err != nil {
-		return "", err
+		return err
 	}
 	if g.History.Ko(next) {
-		return "", errors.New("that's a ko")
+		return errors.New("that's a ko")
 	}
 	g.History = append(g.History, next)
 	g.Passes.Black = false
@@ -172,32 +178,22 @@ func (g *Game) Move(player string, coords [2]int) (string, error) {
 		g.Next = BlackStone
 		g.Captures.White += captures
 	}
-	return "played", nil
+	return nil
 }
 
-// Play for a particular coordinate by voting or moving immediately
-func (g *Game) Play(player string, coords [2]int) (string, error) {
-	if !g.Settings.Vote {
-		return g.Move(player, coords)
-	}
+// VoteForPass votes for the player's pass
+func (g *Game) VoteForPass(player string) error {
 	if !g.Authorized(player) {
-		return "", errors.New("not your turn")
+		return errors.New("not your turn")
 	}
-	if !g.Validate(coords) {
-		return "", errors.New("invalid move")
-	}
-	g.Votes.Moves[player] = coords
-	return "your vote is cast", nil
+	g.Votes.Passes = append(g.Votes.Passes, player)
+	return nil
 }
 
-// Pass by voting or passing immediately
-func (g *Game) Pass(player string) (string, error) {
+// Pass for a player
+func (g *Game) Pass(player string) error {
 	if !g.Authorized(player) {
-		return "", errors.New("not your turn")
-	}
-	if g.Settings.Vote {
-		g.Votes.Passes = append(g.Votes.Passes, player)
-		return "your vote is cast", nil
+		return errors.New("not your turn")
 	}
 	switch g.Next {
 	case BlackStone:
@@ -207,5 +203,5 @@ func (g *Game) Pass(player string) (string, error) {
 		g.Next = BlackStone
 		g.Passes.White = true
 	}
-	return "passed", nil
+	return nil
 }

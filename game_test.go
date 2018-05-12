@@ -1,7 +1,6 @@
 package gobot
 
 import (
-	"encoding/json"
 	"reflect"
 	"testing"
 )
@@ -333,24 +332,21 @@ func TestGameMove(t *testing.T) {
 		},
 	}
 	for _, test := range cases {
-		copy := &Game{}
-		bytes, _ := json.Marshal(test.game)
-		json.Unmarshal(bytes, copy)
-		_, err := copy.Move(test.player, test.coords)
+		err := test.game.Move(test.player, test.coords)
 		if err != nil && !test.err {
 			t.Errorf("unexpected error %s for %s", err.Error(), test.desc)
 		} else if err == nil && test.err {
 			t.Errorf("expected error for %s", test.desc)
-		} else if !reflect.DeepEqual(copy, test.expect) {
+		} else if !reflect.DeepEqual(test.game, test.expect) {
 			t.Errorf(
 				"%s\nexpected\n%#v\nbut got\n%#v\n",
-				test.desc, test.expect, copy,
+				test.desc, test.expect, test.game,
 			)
 		}
 	}
 }
 
-func TestGamePlay(t *testing.T) {
+func TestGameVoteForMove(t *testing.T) {
 	cases := []struct {
 		desc   string
 		game   *Game
@@ -360,48 +356,6 @@ func TestGamePlay(t *testing.T) {
 		err    bool
 	}{
 		{
-			desc: "anyone move at A1",
-			game: &Game{
-				History: History([]Board{[][]Stone{
-					{EmptyStone, EmptyStone},
-					{EmptyStone, EmptyStone},
-				}}),
-				Next:     BlackStone,
-				Players:  Players{Anyone: true},
-				Settings: Settings{},
-				Captures: Captures{0, 0},
-				Passes:   Passes{},
-				Votes: Votes{
-					Moves:  map[string][2]int{},
-					Passes: []string{},
-				},
-				Finished: false,
-			},
-			expect: &Game{
-				History: History([]Board{
-					[][]Stone{
-						{EmptyStone, EmptyStone},
-						{EmptyStone, EmptyStone},
-					},
-					[][]Stone{
-						{BlackStone, EmptyStone},
-						{EmptyStone, EmptyStone},
-					}}),
-				Next:     WhiteStone,
-				Players:  Players{Anyone: true},
-				Settings: Settings{},
-				Captures: Captures{0, 0},
-				Passes:   Passes{},
-				Votes: Votes{
-					Moves:  map[string][2]int{},
-					Passes: []string{},
-				},
-				Finished: false,
-			},
-			player: "foo",
-			coords: [2]int{0, 0},
-			err:    false,
-		}, {
 			desc: "anyone vote at A1",
 			game: &Game{
 				History: History([]Board{[][]Stone{
@@ -503,18 +457,79 @@ func TestGamePlay(t *testing.T) {
 		},
 	}
 	for _, test := range cases {
-		copy := &Game{}
-		bytes, _ := json.Marshal(test.game)
-		json.Unmarshal(bytes, copy)
-		_, err := copy.Play(test.player, test.coords)
+		err := test.game.VoteForMove(test.player, test.coords)
 		if err != nil && !test.err {
 			t.Errorf("unexpected error %s for %s", err.Error(), test.desc)
 		} else if err == nil && test.err {
 			t.Errorf("expected error for %s", test.desc)
-		} else if !reflect.DeepEqual(copy, test.expect) {
+		} else if !reflect.DeepEqual(test.game, test.expect) {
 			t.Errorf(
 				"%s\nexpected\n%#v\nbut got\n%#v\n",
-				test.desc, test.expect, copy,
+				test.desc, test.expect, test.game,
+			)
+		}
+	}
+}
+
+func TestGameVoteForPass(t *testing.T) {
+	cases := []struct {
+		desc   string
+		game   *Game
+		player string
+		expect *Game
+		err    bool
+	}{
+		{
+			desc: "vote for pass",
+			game: &Game{
+				Next:     BlackStone,
+				Players:  Players{Anyone: true},
+				Settings: Settings{Vote: true},
+				Passes:   Passes{},
+				Votes: Votes{
+					Moves:  map[string][2]int{},
+					Passes: []string{},
+				},
+				Finished: false,
+			},
+			expect: &Game{
+				Next:     BlackStone,
+				Players:  Players{Anyone: true},
+				Settings: Settings{Vote: true},
+				Captures: Captures{0, 0},
+				Passes:   Passes{},
+				Votes: Votes{
+					Moves:  map[string][2]int{},
+					Passes: []string{"foo"},
+				},
+				Finished: false,
+			},
+			player: "foo",
+			err:    false,
+		}, {
+			desc: "unauthorized pass",
+			game: &Game{
+				Next:    BlackStone,
+				Players: Players{Anyone: false},
+			},
+			expect: &Game{
+				Next:    BlackStone,
+				Players: Players{Anyone: false},
+			},
+			player: "foo",
+			err:    true,
+		},
+	}
+	for _, test := range cases {
+		err := test.game.VoteForPass(test.player)
+		if err != nil && !test.err {
+			t.Errorf("unexpected error %s for %s", err.Error(), test.desc)
+		} else if err == nil && test.err {
+			t.Errorf("expected error for %s", test.desc)
+		} else if !reflect.DeepEqual(test.game, test.expect) {
+			t.Errorf(
+				"%s\nexpected\n%#v\nbut got\n%#v\n",
+				test.desc, test.expect, test.game,
 			)
 		}
 	}
@@ -582,60 +597,18 @@ func TestGamePass(t *testing.T) {
 			},
 			player: "foo",
 			err:    false,
-		}, {
-			desc: "vote for pass",
-			game: &Game{
-				Next:     BlackStone,
-				Players:  Players{Anyone: true},
-				Settings: Settings{Vote: true},
-				Passes:   Passes{},
-				Votes: Votes{
-					Moves:  map[string][2]int{},
-					Passes: []string{},
-				},
-				Finished: false,
-			},
-			expect: &Game{
-				Next:     BlackStone,
-				Players:  Players{Anyone: true},
-				Settings: Settings{Vote: true},
-				Captures: Captures{0, 0},
-				Passes:   Passes{},
-				Votes: Votes{
-					Moves:  map[string][2]int{},
-					Passes: []string{"foo"},
-				},
-				Finished: false,
-			},
-			player: "foo",
-			err:    false,
-		}, {
-			desc: "unauthorized pass",
-			game: &Game{
-				Next:    BlackStone,
-				Players: Players{Anyone: false},
-			},
-			expect: &Game{
-				Next:    BlackStone,
-				Players: Players{Anyone: false},
-			},
-			player: "foo",
-			err:    true,
 		},
 	}
 	for _, test := range cases {
-		copy := &Game{}
-		bytes, _ := json.Marshal(test.game)
-		json.Unmarshal(bytes, copy)
-		_, err := copy.Pass(test.player)
+		err := test.game.Pass(test.player)
 		if err != nil && !test.err {
 			t.Errorf("unexpected error %s for %s", err.Error(), test.desc)
 		} else if err == nil && test.err {
 			t.Errorf("expected error for %s", test.desc)
-		} else if !reflect.DeepEqual(copy, test.expect) {
+		} else if !reflect.DeepEqual(test.game, test.expect) {
 			t.Errorf(
 				"%s\nexpected\n%#v\nbut got\n%#v\n",
-				test.desc, test.expect, copy,
+				test.desc, test.expect, test.game,
 			)
 		}
 	}

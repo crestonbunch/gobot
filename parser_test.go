@@ -11,7 +11,15 @@ func TestParseBadCommands(t *testing.T) {
 		"gobot asdf",
 	}
 	for _, test := range cases {
-		_, err := Parse(test)
+		_, _, err := ParseGameCommand(test)
+		if err == nil {
+			t.Errorf("expected %s to produce an error", test)
+		}
+		_, err = ParseInfoCommand(test)
+		if err == nil {
+			t.Errorf("expected %s to produce an error", test)
+		}
+		_, err = ParseStartCommand(test)
 		if err == nil {
 			t.Errorf("expected %s to produce an error", test)
 		}
@@ -20,50 +28,54 @@ func TestParseBadCommands(t *testing.T) {
 
 func TestParsePlayCommand(t *testing.T) {
 	cases := []struct {
-		command string
-		expect  *PlayCommand
+		input   string
+		command *PlayCommand
 		err     bool
 	}{
 		{
-			command: "gobot play",
-			expect: &PlayCommand{
+			input: "gobot play",
+			command: &PlayCommand{
 				Players:  Players{Anyone: true},
 				Settings: Settings{Vote: true, Timer: 3600},
 			},
 		}, {
-			command: "gobot play user1 user2",
-			expect: &PlayCommand{
+			input: "gobot play <@USER1> <@USER2>",
+			command: &PlayCommand{
 				Players: Players{
-					Black:  []string{"user1"},
-					White:  []string{"user2"},
+					Black:  []string{"USER1"},
+					White:  []string{"USER2"},
 					Anyone: false,
 				},
 				Settings: Settings{},
 			},
 		}, {
-			command: "gobot play user1 user2 user3",
-			expect:  nil,
+			input:   "gobot play user1 user2 user3",
+			command: nil,
+			err:     true,
+		}, {
+			input:   "gobot play user1 user2",
+			command: nil,
 			err:     true,
 		},
 	}
 
 	for _, test := range cases {
-		parsed, err := Parse(test.command)
-		actual := parsed.(*PlayCommand)
+		actual, err := ParseStartCommand(test.input)
 		if err == nil && test.err {
-			t.Errorf("expected error for %s", test.command)
+			t.Errorf("expected error for %s", test.input)
 		} else if err != nil && !test.err {
-			t.Errorf("unexpected error %s for %s", err.Error(), test.command)
+			t.Errorf("unexpected error %s for %s", err.Error(), test.input)
 		} else if actual != nil {
-			if !reflect.DeepEqual(actual, test.expect) {
+			if !reflect.DeepEqual(actual, test.command) {
 				t.Errorf(
-					"expected:\n%#v\nbut got:\n%#v\n",
-					*test.expect,
-					*actual,
+					"%s\nexpected:\n%#v\nbut got:\n%#v\n",
+					test.input,
+					test.command,
+					actual,
 				)
 			}
 		} else if actual == nil {
-			if test.expect != nil {
+			if test.command != nil {
 				t.Errorf("encountered unexpected nil")
 			}
 		}
@@ -72,49 +84,57 @@ func TestParsePlayCommand(t *testing.T) {
 
 func TestParseMoveCommand(t *testing.T) {
 	cases := []struct {
-		command string
-		expect  *MoveCommand
+		input   string
+		command *MoveCommand
+		locator *GameLocator
 		err     bool
 	}{
 		{
-			command: "gobot move A4",
-			expect: &MoveCommand{
-				GameID:      -1,
+			input: "gobot move A4",
+			command: &MoveCommand{
 				Coordinates: [2]int{3, 0},
 			},
+			locator: &GameLocator{Auto: true},
 		}, {
-			command: "gobot move 12 D14",
-			expect: &MoveCommand{
-				GameID:      12,
+			input: "gobot move 12 D14",
+			command: &MoveCommand{
 				Coordinates: [2]int{13, 3},
 			},
+			locator: &GameLocator{GameID: 12},
 		}, {
-			command: "gobot move 12 Z14",
-			expect:  nil,
+			input:   "gobot move 12 Z14",
+			command: nil,
+			locator: nil,
 			err:     true,
 		}, {
-			command: "gobot move BBZ",
-			expect:  nil,
+			input:   "gobot move BBZ",
+			command: nil,
+			locator: nil,
 			err:     true,
 		},
 	}
 
 	for _, test := range cases {
-		parsed, err := Parse(test.command)
-		actual := parsed.(*MoveCommand)
+		actual, locator, err := ParseGameCommand(test.input)
 		if err == nil && test.err {
-			t.Errorf("expected %s to make an error", test.command)
+			t.Errorf("expected %s to make an error", test.input)
 		} else if err != nil && !test.err {
 			t.Errorf(
-				"%s triggered unexpected error %s", test.command, err.Error(),
+				"%s triggered unexpected error %s", test.input, err.Error(),
 			)
-		} else if actual == nil && test.expect != nil {
-			t.Errorf("%s returned unexepected nil", test.command)
+		} else if actual == nil && test.command != nil {
+			t.Errorf("%s returned unexepected nil", test.input)
 		} else {
-			if !reflect.DeepEqual(actual, test.expect) {
+			if !reflect.DeepEqual(actual, test.command) {
 				t.Errorf(
 					"%s return\n%#v\nbut expected\n%#v\n",
-					test.command, actual, test.expect,
+					test.input, actual, test.command,
+				)
+			}
+			if !reflect.DeepEqual(locator, test.locator) {
+				t.Errorf(
+					"%s return\n%#v\nbut expected\n%#v\n",
+					test.input, locator, test.locator,
 				)
 			}
 		}
@@ -123,43 +143,48 @@ func TestParseMoveCommand(t *testing.T) {
 
 func TestParsePassCommand(t *testing.T) {
 	cases := []struct {
-		command string
-		expect  *PassCommand
+		input   string
+		command *PassCommand
+		locator *GameLocator
 		err     bool
 	}{
 		{
-			command: "gobot pass",
-			expect: &PassCommand{
-				GameID: -1,
-			},
+			input:   "gobot pass",
+			command: &PassCommand{},
+			locator: &GameLocator{Auto: true},
 		}, {
-			command: "gobot pass 13",
-			expect: &PassCommand{
-				GameID: 13,
-			},
+			input:   "gobot pass 13",
+			command: &PassCommand{},
+			locator: &GameLocator{GameID: 13},
 		}, {
-			command: "gobot pass A",
-			expect:  nil,
+			input:   "gobot pass A",
+			command: nil,
+			locator: nil,
 			err:     true,
 		},
 	}
 
 	for _, test := range cases {
-		parsed, err := Parse(test.command)
-		actual := parsed.(*PassCommand)
+		actual, locator, err := ParseGameCommand(test.input)
 		if err == nil && test.err {
-			t.Errorf("expected %s to make an error", test.command)
+			t.Errorf("expected %s to make an error", test.input)
 		} else if err != nil && !test.err {
 			t.Errorf(
-				"%s triggered unexpected error %s", test.command, err.Error(),
+				"%s triggered unexpected error %s", test.input, err.Error(),
 			)
-		} else if actual == nil && test.expect != nil {
-			t.Errorf("%s returned unexepected nil", test.command)
+		} else if actual == nil && test.command != nil {
+			t.Errorf("%s returned unexepected nil", test.input)
 		} else {
-			if !reflect.DeepEqual(actual, test.expect) {
+			if !reflect.DeepEqual(actual, test.command) {
 				t.Errorf(
 					"%s return\n%#v\nbut expected\n%#v\n",
-					test.command, actual, test.expect,
+					test.input, actual, test.command,
+				)
+			}
+			if !reflect.DeepEqual(locator, test.locator) {
+				t.Errorf(
+					"%s return\n%#v\nbut expected\n%#v\n",
+					test.input, locator, test.locator,
 				)
 			}
 		}
@@ -168,43 +193,49 @@ func TestParsePassCommand(t *testing.T) {
 
 func TestParseShowCommand(t *testing.T) {
 	cases := []struct {
-		command string
-		expect  *ShowCommand
+		input   string
+		command *ShowCommand
+		locator *GameLocator
 		err     bool
 	}{
 		{
-			command: "gobot show",
-			expect: &ShowCommand{
-				GameID: -1,
-			},
+			input:   "gobot show",
+			command: &ShowCommand{},
+			locator: &GameLocator{Auto: true},
 		}, {
-			command: "gobot show 13",
-			expect: &ShowCommand{
-				GameID: 13,
-			},
+			input:   "gobot show 13",
+			command: &ShowCommand{},
+			locator: &GameLocator{GameID: 13},
 		}, {
-			command: "gobot show A",
-			expect:  nil,
+			input:   "gobot show A",
+			command: nil,
+			locator: nil,
 			err:     true,
 		},
 	}
 
 	for _, test := range cases {
-		parsed, err := Parse(test.command)
+		parsed, locator, err := ParseGameCommand(test.input)
 		actual := parsed.(*ShowCommand)
 		if err == nil && test.err {
-			t.Errorf("expected %s to make an error", test.command)
+			t.Errorf("expected %s to make an error", test.input)
 		} else if err != nil && !test.err {
 			t.Errorf(
-				"%s triggered unexpected error %s", test.command, err.Error(),
+				"%s triggered unexpected error %s", test.input, err.Error(),
 			)
-		} else if actual == nil && test.expect != nil {
-			t.Errorf("%s returned unexepected nil", test.command)
+		} else if actual == nil && test.command != nil {
+			t.Errorf("%s returned unexepected nil", test.input)
 		} else {
-			if !reflect.DeepEqual(actual, test.expect) {
+			if !reflect.DeepEqual(actual, test.command) {
 				t.Errorf(
 					"%s return\n%#v\nbut expected\n%#v\n",
-					test.command, actual, test.expect,
+					test.input, actual, test.command,
+				)
+			}
+			if !reflect.DeepEqual(locator, test.locator) {
+				t.Errorf(
+					"%s return\n%#v\nbut expected\n%#v\n",
+					test.input, locator, test.locator,
 				)
 			}
 		}
@@ -213,43 +244,49 @@ func TestParseShowCommand(t *testing.T) {
 
 func TestParseScoreCommand(t *testing.T) {
 	cases := []struct {
-		command string
-		expect  *ScoreCommand
+		input   string
+		command *ScoreCommand
+		locator *GameLocator
 		err     bool
 	}{
 		{
-			command: "gobot score",
-			expect: &ScoreCommand{
-				GameID: -1,
-			},
+			input:   "gobot score",
+			command: &ScoreCommand{},
+			locator: &GameLocator{Auto: true},
 		}, {
-			command: "gobot score 13",
-			expect: &ScoreCommand{
-				GameID: 13,
-			},
+			input:   "gobot score 13",
+			command: &ScoreCommand{},
+			locator: &GameLocator{GameID: 13},
 		}, {
-			command: "gobot score A",
-			expect:  nil,
+			input:   "gobot score A",
+			command: nil,
+			locator: nil,
 			err:     true,
 		},
 	}
 
 	for _, test := range cases {
-		parsed, err := Parse(test.command)
+		parsed, locator, err := ParseGameCommand(test.input)
 		actual := parsed.(*ScoreCommand)
 		if err == nil && test.err {
-			t.Errorf("expected %s to make an error", test.command)
+			t.Errorf("expected %s to make an error", test.input)
 		} else if err != nil && !test.err {
 			t.Errorf(
-				"%s triggered unexpected error %s", test.command, err.Error(),
+				"%s triggered unexpected error %s", test.input, err.Error(),
 			)
-		} else if actual == nil && test.expect != nil {
-			t.Errorf("%s returned unexepected nil", test.command)
+		} else if actual == nil && test.command != nil {
+			t.Errorf("%s returned unexepected nil", test.input)
 		} else {
-			if !reflect.DeepEqual(actual, test.expect) {
+			if !reflect.DeepEqual(actual, test.command) {
 				t.Errorf(
 					"%s return\n%#v\nbut expected\n%#v\n",
-					test.command, actual, test.expect,
+					test.input, actual, test.command,
+				)
+			}
+			if !reflect.DeepEqual(locator, test.locator) {
+				t.Errorf(
+					"%s return\n%#v\nbut expected\n%#v\n",
+					test.input, locator, test.locator,
 				)
 			}
 		}
@@ -258,41 +295,40 @@ func TestParseScoreCommand(t *testing.T) {
 
 func TestParseListCommand(t *testing.T) {
 	cases := []struct {
-		command string
-		expect  *ListCommand
-		err     bool
+		input  string
+		expect *ListCommand
+		err    bool
 	}{
 		{
-			command: "gobot list",
-			expect:  &ListCommand{},
+			input:  "gobot list",
+			expect: &ListCommand{},
 		}, {
-			command: "gobot list all",
+			input: "gobot list all",
 			expect: &ListCommand{
 				All: true,
 			},
 		}, {
-			command: "gobot list asdf",
-			expect:  nil,
-			err:     true,
+			input:  "gobot list asdf",
+			expect: nil,
+			err:    true,
 		},
 	}
 
 	for _, test := range cases {
-		parsed, err := Parse(test.command)
-		actual := parsed.(*ListCommand)
+		actual, err := ParseInfoCommand(test.input)
 		if err == nil && test.err {
-			t.Errorf("expected %s to make an error", test.command)
+			t.Errorf("expected %s to make an error", test.input)
 		} else if err != nil && !test.err {
 			t.Errorf(
-				"%s triggered unexpected error %s", test.command, err.Error(),
+				"%s triggered unexpected error %s", test.input, err.Error(),
 			)
 		} else if actual == nil && test.expect != nil {
-			t.Errorf("%s returned unexepected nil", test.command)
+			t.Errorf("%s returned unexepected nil", test.input)
 		} else {
 			if !reflect.DeepEqual(actual, test.expect) {
 				t.Errorf(
 					"%s return\n%#v\nbut expected\n%#v\n",
-					test.command, actual, test.expect,
+					test.input, actual, test.expect,
 				)
 			}
 		}

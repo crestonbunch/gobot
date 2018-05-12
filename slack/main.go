@@ -43,11 +43,23 @@ func main() {
 		}
 	}()
 
-	for msg := range bot.Responses {
+	for msg := range bot.Replies {
 		params := slack.PostMessageParameters{}
-		if msg.Attachment != nil {
-			params.Attachments = []slack.Attachment{*msg.Attachment}
+		if msg.File != nil {
+			_, err := api.UploadFile(*msg.File)
+			if err != nil {
+				api.PostMessage(
+					msg.Channel,
+					fmt.Sprintf("error uploading image %s", err.Error()),
+					params,
+				)
+			}
+			// Cleanup file we don't need anymore
+			if msg.File.File != "" {
+				os.Remove(msg.File.File)
+			}
+		} else {
+			api.PostMessage(msg.Channel, msg.Text, params)
 		}
-		api.PostMessage(msg.Channel, msg.Text, params)
 	}
 }

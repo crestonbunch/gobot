@@ -2,6 +2,7 @@ package gobot
 
 import (
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -21,12 +22,11 @@ const (
 	ListToken string = "list"
 )
 
-// A GameCommand is any command that corresponds to a single game
-type GameCommand interface {
-	Game() int
-}
+// Command is an interface that represents a parsed bot command
+type Command interface{}
 
-// PlayCommand initiates a new game
+// PlayCommand initiates a new game with the desired settings among the
+// desired players.
 type PlayCommand struct {
 	Players  Players
 	Settings Settings
@@ -34,52 +34,48 @@ type PlayCommand struct {
 
 // MoveCommand plays a move in a game
 type MoveCommand struct {
-	GameID      int
 	Coordinates [2]int
 }
 
-// Game returns the GameID target of the command
-func (c *MoveCommand) Game() int {
-	return c.GameID
-}
-
 // PassCommand plays a pass in a game
-type PassCommand struct {
-	GameID int
-}
-
-// Game returns the GameID target of the command
-func (c *PassCommand) Game() int {
-	return c.GameID
-}
+type PassCommand struct{}
 
 // ShowCommand shows the current game state
-type ShowCommand struct {
-	GameID int
-}
-
-// Game returns the GameID target of the command
-func (c *ShowCommand) Game() int {
-	return c.GameID
-}
+type ShowCommand struct{}
 
 // ScoreCommand scores the current game state
-type ScoreCommand struct {
-	GameID int
-}
-
-// Game returns the GameID target of the command
-func (c *ScoreCommand) Game() int {
-	return c.GameID
-}
+type ScoreCommand struct{}
 
 // ListCommand lists games
 type ListCommand struct {
 	All bool
 }
 
-// Parse a string into a gobot command
-func Parse(command string) (interface{}, error) {
+func isCommand(input string, botID string) bool {
+	return strings.HasPrefix(input, "<@"+botID+">")
+}
+
+func stripName(input string, botID string) string {
+	return strings.Replace(input, "<@"+botID+"> ", "", 1)
+}
+
+func isStartCommand(input string) bool {
+	return strings.HasPrefix(input, PlayToken)
+}
+
+func isGameCommand(input string) bool {
+	return strings.HasPrefix(input, MoveToken) ||
+		strings.HasPrefix(input, PassToken) ||
+		strings.HasPrefix(input, ShowToken) ||
+		strings.HasPrefix(input, ScoreToken)
+}
+
+func isInfoCommand(input string) bool {
+	return strings.HasPrefix(input, ListToken)
+}
+
+// ParseStartCommand parses a command that starts a new game
+func ParseStartCommand(command string) (Command, error) {
 	args := strings.Split(command, " ")
 	if len(args) < 2 {
 		return nil, fmt.Errorf("could not understand %s", command)
@@ -87,6 +83,19 @@ func Parse(command string) (interface{}, error) {
 	switch args[1] {
 	case PlayToken:
 		return parsePlayCommand(args[2:])
+	default:
+		return nil, fmt.Errorf("could not understand %s", command)
+	}
+}
+
+// ParseGameCommand parses a command that targets a specific game, and returns
+// a game locator that can be used to find the target game.
+func ParseGameCommand(command string) (Command, *GameLocator, error) {
+	args := strings.Split(command, " ")
+	if len(args) < 2 {
+		return nil, nil, fmt.Errorf("could not understand %s", command)
+	}
+	switch args[1] {
 	case MoveToken:
 		return parseMoveCommand(args[2:])
 	case PassToken:
@@ -95,6 +104,19 @@ func Parse(command string) (interface{}, error) {
 		return parseShowCommand(args[2:])
 	case ScoreToken:
 		return parseScoreCommand(args[2:])
+	default:
+		return nil, nil, fmt.Errorf("could not understand %s", command)
+	}
+}
+
+// ParseInfoCommand parses a command that does not operate on a game, but might
+// list games, rank users, etc.
+func ParseInfoCommand(command string) (Command, error) {
+	args := strings.Split(command, " ")
+	if len(args) < 2 {
+		return nil, fmt.Errorf("could not understand %s", command)
+	}
+	switch args[1] {
 	case ListToken:
 		return parseListCommand(args[2:])
 	default:
@@ -102,14 +124,28 @@ func Parse(command string) (interface{}, error) {
 	}
 }
 
+func parseUserID(token string) (string, error) {
+	re := regexp.MustCompile("<@([^>]+)>")
+	matches := re.FindStringSubmatch(token)
+	if len(matches) < 2 {
+		return "", fmt.Errorf("%s is not a valid user", token)
+	}
+	return matches[1], nil
+}
+
 func parsePlayCommand(players []string) (*PlayCommand, error) {
 	switch len(players) {
 	// Two players only
 	case 2:
+		p1, err := parseUserID(players[0])
+		p2, err := parseUserID(players[1])
+		if err != nil {
+			return nil, err
+		}
 		return &PlayCommand{
 			Players: Players{
-				Black: []string{players[0]},
-				White: []string{players[1]},
+				Black: []string{p1},
+				White: []string{p2},
 			},
 			Settings: Settings{
 				Vote: false,
@@ -140,8 +176,8 @@ func parseCoordinates(coords string) ([2]int, error) {
 	}
 	letter := coords[0]
 	number, err := strconv.Atoi(coords[1:])
-	if letter < 'A' || letter > 'P' {
-		return result, fmt.Errorf("%b is out of range", letter)
+	if letter < 'A' || letter > 'S' {
+		return result, fmt.Errorf("%s is out of range", string(letter))
 	}
 	if err != nil {
 		return result, fmt.Errorf("%s is not a number", coords[1:])
@@ -151,71 +187,67 @@ func parseCoordinates(coords string) ([2]int, error) {
 	return result, nil
 }
 
-func parseMoveCommand(args []string) (*MoveCommand, error) {
+func parseMoveCommand(args []string) (*MoveCommand, *GameLocator, error) {
 	if len(args) < 1 {
-		return nil, fmt.Errorf("need to play a move")
+		return nil, nil, fmt.Errorf("need to play a move")
 	}
 	gameID, err := strconv.Atoi(args[0])
 	if err == nil {
 		if len(args) < 2 {
-			return nil, fmt.Errorf("need to play a move")
+			return nil, nil, fmt.Errorf("need to play a move")
 		}
 		coords, err := parseCoordinates(args[1])
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		return &MoveCommand{
-			GameID:      gameID,
-			Coordinates: coords,
-		}, nil
+				Coordinates: coords,
+			}, &GameLocator{
+				GameID: gameID,
+			}, nil
 	}
 	coords, err := parseCoordinates(args[0])
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	return &MoveCommand{
-		GameID:      -1,
-		Coordinates: coords,
-	}, nil
+			Coordinates: coords,
+		}, &GameLocator{
+			Auto: true,
+		}, nil
 }
 
-func parsePassCommand(args []string) (*PassCommand, error) {
+func parsePassCommand(args []string) (*PassCommand, *GameLocator, error) {
 	if len(args) < 1 {
-		return &PassCommand{GameID: -1}, nil
+		return &PassCommand{}, &GameLocator{Auto: true}, nil
 	}
 	gameID, err := strconv.Atoi(args[0])
 	if err == nil {
-		return &PassCommand{
-			GameID: gameID,
-		}, nil
+		return &PassCommand{}, &GameLocator{GameID: gameID}, nil
 	}
-	return nil, fmt.Errorf("invalid game id %s", args[0])
+	return nil, nil, fmt.Errorf("invalid game id %s", args[0])
 }
 
-func parseShowCommand(args []string) (*ShowCommand, error) {
+func parseShowCommand(args []string) (*ShowCommand, *GameLocator, error) {
 	if len(args) < 1 {
-		return &ShowCommand{GameID: -1}, nil
+		return &ShowCommand{}, &GameLocator{Auto: true}, nil
 	}
 	gameID, err := strconv.Atoi(args[0])
 	if err == nil {
-		return &ShowCommand{
-			GameID: gameID,
-		}, nil
+		return &ShowCommand{}, &GameLocator{GameID: gameID}, nil
 	}
-	return nil, fmt.Errorf("invalid game id %s", args[0])
+	return nil, nil, fmt.Errorf("invalid game id %s", args[0])
 }
 
-func parseScoreCommand(args []string) (*ScoreCommand, error) {
+func parseScoreCommand(args []string) (*ScoreCommand, *GameLocator, error) {
 	if len(args) < 1 {
-		return &ScoreCommand{GameID: -1}, nil
+		return &ScoreCommand{}, &GameLocator{Auto: true}, nil
 	}
 	gameID, err := strconv.Atoi(args[0])
 	if err == nil {
-		return &ScoreCommand{
-			GameID: gameID,
-		}, nil
+		return &ScoreCommand{}, &GameLocator{GameID: gameID}, nil
 	}
-	return nil, fmt.Errorf("invalid game id %s", args[0])
+	return nil, nil, fmt.Errorf("invalid game id %s", args[0])
 }
 
 func parseListCommand(args []string) (*ListCommand, error) {
