@@ -19,7 +19,6 @@ type SlackInterface struct {
 	API     *slack.Client
 	RTM     *slack.RTM
 	Command chan string
-	Replies chan *Response
 	Stop    chan bool
 }
 
@@ -36,14 +35,12 @@ func NewSlackInterface(api *slack.Client) (*SlackInterface, error) {
 		API:     api,
 		RTM:     rtm,
 		Command: make(chan string),
-		Replies: make(chan *Response),
 		Stop:    make(chan bool),
 	}, nil
 }
 
 // Close go channels and open connections
 func (i *SlackInterface) Close() {
-	close(i.Replies)
 }
 
 // Block the current goroutine until the stop signal is received
@@ -56,7 +53,7 @@ func (i *SlackInterface) sendText(text string) {
 	i.API.PostMessage(i.Channel, text, params)
 }
 
-func (i *SlackInterface) sendImage(im image.Image, name string) {
+func (i *SlackInterface) sendImage(im image.Image, name, details string) {
 	temp, err := ioutil.TempFile("", "gobot")
 	if err != nil {
 		i.sendText("could not save image")
@@ -65,9 +62,10 @@ func (i *SlackInterface) sendImage(im image.Image, name string) {
 	defer os.Remove(temp.Name())
 	png.Encode(temp, im)
 	file := &slack.FileUploadParameters{
-		Title:    name,
-		File:     temp.Name(),
-		Channels: []string{i.Channel},
+		Title:          name,
+		File:           temp.Name(),
+		Channels:       []string{i.Channel},
+		InitialComment: details,
 	}
 	_, err = i.API.UploadFile(*file)
 	if err != nil {
@@ -75,10 +73,10 @@ func (i *SlackInterface) sendImage(im image.Image, name string) {
 	}
 }
 
-func (i *SlackInterface) sendGame(g *Game) {
+func (i *SlackInterface) sendGame(g *Game, details string) {
 	im, _ := Render(g.Board())
 	name := fmt.Sprintf("Game %d", g.ID)
-	i.sendImage(im, name)
+	i.sendImage(im, name, details)
 }
 
 // IsSlackCommand checks if the command is for the slack bot
@@ -98,13 +96,13 @@ func (i *SlackInterface) ConvertSlackCommand(input string) string {
 }
 
 // StartSending replies received along the reply channel
-func (i *SlackInterface) StartSending() {
-	for r := range i.Replies {
+func (i *SlackInterface) StartSending(server *Server) {
+	for r := range server.Replies {
 		if r == nil {
 			continue
 		}
 		if r.Game != nil {
-			i.sendGame(r.Game)
+			i.sendGame(r.Game, r.Details)
 		} else {
 			i.sendText(r.Text)
 		}
@@ -127,7 +125,7 @@ func (i *SlackInterface) StartReceiving(server *Server) {
 				if err != nil {
 					i.sendText(err.Error())
 				}
-				i.Replies <- reply
+				server.Replies <- reply
 			}
 		}
 	}

@@ -15,7 +15,7 @@ func main() {
 	slack.SetLogger(logger)
 
 	api := slack.New(token)
-	api.SetDebug(true)
+	api.SetDebug(false)
 
 	i, err := gobot.NewSlackInterface(api)
 	if err != nil {
@@ -26,7 +26,7 @@ func main() {
 	bot := gobot.New()
 	go bot.Start()
 	go i.StartReceiving(bot)
-	go i.StartSending()
+	go i.StartSending(bot)
 
 	i.Block()
 }

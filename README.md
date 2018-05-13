@@ -1,12 +1,10 @@
-Gobot
-=====
+# Gobot
 
 Gobot is a Slack bot for playing go with other people instead of doing work.
 
 Naturally it is written in Go.
 
-Setup
------
+## Setup
 
 Create a [Slack bot](api.slack.com) and copy the `Bot User OAuth Access Token`
 
@@ -16,27 +14,23 @@ Set an environment variable with your Slack API token
 
 Or put it in your .bash_rc file (or wherever you put env variables)
 
-Run
------
+## Run
 
 From the project directory after cloning the repo
 
     go run ./slack/main.go
 
-Precommit
------
+## Precommit
 
 Install [pre-commit-go](https://github.com/maruel/pre-commit-go)
 
     go get github.com/maruel/pre-commit-go/cmd/...
 
-and make sure `pcb` is in your path
+and make sure `pcg` is in your path
 
-Features
---------
+## Features
 
 ### Done
-
 
 * `@gobot play`
 * `@gobot move`
@@ -44,13 +38,13 @@ Features
 * Encoding game state and rules
 * Rendering image
 * Communicating with slack
+* Vote timer
 
 ### Todo
 
 * `@gobot score`
 * `@gobot show`
 * `@gobot list`
-* Vote timer
 * Persistence
 * End game
 
@@ -60,8 +54,7 @@ Stretch goals
 * WWAGD (what would AlphaGo do?)
 * SGF export
 
-Talking to the Bot
------
+## Talking to the Bot
 
 1. Invite it into your channel
 

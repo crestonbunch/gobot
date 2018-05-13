@@ -6,8 +6,9 @@ import (
 
 // Response is a response to a command. It can contain text or a game state.
 type Response struct {
-	Text string
-	Game *Game
+	Text    string
+	Game    *Game
+	Details string
 }
 
 // NewTextResponse builds a text response
@@ -18,6 +19,11 @@ func NewTextResponse(text string) *Response {
 // NewGameResponse builds a game response
 func NewGameResponse(game *Game) *Response {
 	return &Response{Game: game}
+}
+
+// NewGameResponseWithDetails builds a game response with extra info
+func NewGameResponseWithDetails(game *Game, details string) *Response {
+	return &Response{Game: game, Details: details}
 }
 
 // Dispatch a command by a player to a game

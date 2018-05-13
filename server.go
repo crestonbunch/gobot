@@ -3,23 +3,42 @@ package gobot
 import (
 	"errors"
 	"fmt"
+	"math/rand"
+	"time"
 )
 
 // Server handles receiving requests and performing actions.
 type Server struct {
-	NextID int
-	Games  GameStore
+	NextID  int
+	Games   GameStore
+	Timers  map[*Game]*time.Timer
+	Replies chan *Response
 }
 
 // New creates a new gobot server to listen to messages
 func New() *Server {
 	return &Server{
-		Games: map[int]*Game{},
+		Games:   map[int]*Game{},
+		Timers:  map[*Game]*time.Timer{},
+		Replies: make(chan *Response),
 	}
 }
 
 // Start starts the bot server
 func (s *Server) Start() {
+}
+
+// AddTimer adds a vote timer for a game
+func (s *Server) AddTimer(game *Game) {
+	s.Timers[game] = time.AfterFunc(
+		game.Settings.Timer*time.Second,
+		func() {
+			rng := rand.New(rand.NewSource(time.Now().Unix()))
+			s.Replies <- game.PickRandomVote(rng)
+			// Add the timer again to keep on going
+			s.AddTimer(game)
+		},
+	)
 }
 
 // Handle a command and return a response
@@ -35,6 +54,10 @@ func (s *Server) Handle(input, user string) (*Response, error) {
 		game := NewGame(s.NextID, players, settings)
 		s.Games.Add(game)
 		s.NextID++
+		if game.Settings.Vote {
+			// add a vote timer
+			s.AddTimer(game)
+		}
 		return NewGameResponse(game), nil
 	} else if isGameCommand(input) {
 		// handle command to modify a game
