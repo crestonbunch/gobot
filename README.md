@@ -6,13 +6,13 @@ Naturally it is written in Go.
 
 ## Setup
 
-Create a [Slack bot](https://api.slack.com) and copy the `Bot User OAuth Access Token`
+Create a [Slack bot](https://api.slack.com/bot-users) and copy the `Bot User OAuth Access Token`
 
 Set an environment variable with your Slack API token
 
     export SLACK_API_TOKEN=<bot user oauth token goes here>
 
-Or put it in your .bash_rc file (or wherever you put env variables)
+Or put it in your ~/.bashrc file (or wherever you put env variables)
 
 ## Run
 
