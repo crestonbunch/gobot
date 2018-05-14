@@ -2,8 +2,6 @@ package gobot
 
 import (
 	"errors"
-	"math/rand"
-	"sort"
 	"strconv"
 	"time"
 )
@@ -38,10 +36,14 @@ type Passes struct {
 	White bool `json:"white"`
 }
 
-// Vote stores a vote to either move or pass
-type Vote struct {
-	Move [2]int `json:"move"`
-	Pass bool   `json:"pass"`
+// Coords represents a board coordinate in (x, y) values
+type Coords [2]int
+
+// String implements the stringer interface
+func (c Coords) String() string {
+	letter := string(c[0] + 'A')
+	number := strconv.Itoa(c[1] + 1)
+	return letter + number
 }
 
 // History stores the entire history of a game
@@ -57,17 +59,16 @@ func (h History) Ko(b Board) bool {
 
 // Game stores the entire game state for a single game
 type Game struct {
-	ID        int             `json:"id"`
-	History   History         `json:"history"`
-	Next      Stone           `json:"next"`
-	Players   Players         `json:"players"`
-	Settings  Settings        `json:"settings"`
-	Captures  Captures        `json:"captures"`
-	Passes    Passes          `json:"passes"`
-	Votes     map[string]Vote `json:"votes"`
-	Finished  bool            `json:"finished"`
-	CreatedAt time.Time       `json:"created_at"`
-	UpdatedAt time.Time       `json:"updated_at"`
+	ID        int       `json:"id"`
+	History   History   `json:"history"`
+	Next      Stone     `json:"next"`
+	Players   Players   `json:"players"`
+	Settings  Settings  `json:"settings"`
+	Captures  Captures  `json:"captures"`
+	Passes    Passes    `json:"passes"`
+	Finished  bool      `json:"finished"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 // NewGame creates a new game with the given players and settings
@@ -80,7 +81,6 @@ func NewGame(id int, players Players, settings Settings) *Game {
 		Settings:  settings,
 		Captures:  Captures{0, 0},
 		Passes:    Passes{},
-		Votes:     map[string]Vote{},
 		Finished:  false,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
@@ -123,8 +123,7 @@ func (g *Game) IsPlayerBlack(user string) bool {
 	return false
 }
 
-// Authorized checks if the user is authorized to make or vote for the next
-// move.
+// Authorized checks if the user can make the next move
 func (g *Game) Authorized(user string) bool {
 	switch g.Next {
 	case BlackStone:
@@ -135,68 +134,27 @@ func (g *Game) Authorized(user string) bool {
 	return false
 }
 
-func coordsToString(coords [2]int) string {
-	prefix := coords[0] + 'A'
-	suffix := strconv.Itoa(coords[1] + 1)
-	return string(prefix) + suffix
-}
-
-// PickRandomVote picks a random action from the voting pool, or does nothing
-// if there are no votes.
-func (g *Game) PickRandomVote(rng *rand.Rand) *Response {
-	users := []string{}
-	for user := range g.Votes {
-		users = append(users, user)
-	}
-	if len(users) == 0 {
-		return nil
-	}
-	// sort usernames so we can deterministically know which user it will pick
-	sort.Strings(users)
-	roll := rng.Intn(len(users))
-	player := users[roll]
-	vote := g.Votes[player]
-	// Reset votes
-	g.Votes = map[string]Vote{}
-	if vote.Pass {
-		g.Pass(player)
-		return NewGameResponseWithDetails(g, "voted to pass")
-	}
-	g.Move(player, vote.Move)
-	return NewGameResponseWithDetails(
-		g, "winning vote "+coordsToString(vote.Move))
-}
-
-// VoteForMove sets the vote for a player's move
-func (g *Game) VoteForMove(player string, coords [2]int) error {
-	if !g.Authorized(player) {
-		return errors.New("not your turn")
-	}
+// Valid checks whether a move can be made or not
+func (g *Game) Valid(player string, coords Coords) bool {
 	current := g.Board()
 	next, _, err := current.Play(coords[0], coords[1], g.Next)
 	if err != nil {
-		return err
+		return false
 	}
-	if g.History.Ko(next) {
-		return errors.New("that's a ko")
-	}
-	g.Votes[player] = Vote{Move: coords}
-	return nil
+	return !g.History.Ko(next)
 }
 
 // Move for a particular coordinate
-func (g *Game) Move(player string, coords [2]int) error {
+func (g *Game) Move(player string, coords Coords) error {
 	if !g.Authorized(player) {
 		return errors.New("not your turn")
 	}
+	if !g.Valid(player, coords) {
+		return errors.New("invalid move")
+	}
 	current := g.Board()
-	next, captures, err := current.Play(coords[0], coords[1], g.Next)
-	if err != nil {
-		return err
-	}
-	if g.History.Ko(next) {
-		return errors.New("that's a ko")
-	}
+	// skip err check because we already made it
+	next, captures, _ := current.Play(coords[0], coords[1], g.Next)
 	g.History = append(g.History, next)
 	g.Passes.Black = false
 	g.Passes.White = false
@@ -208,15 +166,6 @@ func (g *Game) Move(player string, coords [2]int) error {
 		g.Next = BlackStone
 		g.Captures.White += captures
 	}
-	return nil
-}
-
-// VoteForPass votes for the player's pass
-func (g *Game) VoteForPass(player string) error {
-	if !g.Authorized(player) {
-		return errors.New("not your turn")
-	}
-	g.Votes[player] = Vote{Pass: true}
 	return nil
 }
 
@@ -234,4 +183,12 @@ func (g *Game) Pass(player string) error {
 		g.Passes.White = true
 	}
 	return nil
+}
+
+// Vote plays the given vote for a player
+func (g *Game) Vote(player string, vote *Vote) error {
+	if vote.Pass {
+		return g.Pass(player)
+	}
+	return g.Move(player, vote.Move)
 }

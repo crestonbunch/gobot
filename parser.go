@@ -2,132 +2,77 @@ package gobot
 
 import (
 	"fmt"
+	"regexp"
 	"strconv"
-	"strings"
+	"time"
 )
 
-const (
-	// PlayToken indicates a play command
-	PlayToken string = "play"
-	// MoveToken indicates a move command
-	MoveToken string = "move"
-	// PassToken indicates a pass command
-	PassToken string = "pass"
-	// ShowToken indicates a show command
-	ShowToken string = "show"
-	// ScoreToken indicates a score command
-	ScoreToken string = "score"
-	// ListToken indicates a list command
-	ListToken string = "list"
-)
+// StartRegex matches a start command
+var StartRegex = regexp.MustCompile("^start$")
 
-// Command is an interface that represents a parsed bot command
-type Command interface{}
+// TwoPlayerStartRegex matches a start command with two players
+var TwoPlayerStartRegex = regexp.MustCompile("^start ([^ ]+) ([^ ]+)$")
 
-// PlayCommand initiates a new game with the desired settings among the
-// desired players.
-type PlayCommand struct {
-	Players  Players
-	Settings Settings
-}
+// MoveRegex matches a move command
+var MoveRegex = regexp.MustCompile("^move (pass|[A-Z][0-9]+)$")
 
-// MoveCommand plays a move in a game
-type MoveCommand struct {
-	Coordinates [2]int
-}
+// GameMoveRegex matches a move command for a specific game
+var GameMoveRegex = regexp.MustCompile("^move ([0-9]+) (pass|[A-Z][0-9]+)$")
 
-// PassCommand plays a pass in a game
-type PassCommand struct{}
+// VoteRegex matches a vote command
+var VoteRegex = regexp.MustCompile("^vote (pass|[A-Z][0-9]+)$")
 
-// ShowCommand shows the current game state
-type ShowCommand struct{}
+// GameVoteRegex matches a vote command for a specific game
+var GameVoteRegex = regexp.MustCompile("^vote ([0-9]+) (pass|[A-Z][0-9]+)$")
 
-// ScoreCommand scores the current game state
-type ScoreCommand struct{}
+// PlayRegex matches a play command
+var PlayRegex = regexp.MustCompile("^play$")
 
-// ListCommand lists games
-type ListCommand struct {
-	All bool
-}
+// GamePlayRegex matches a play command for a specific game
+var GamePlayRegex = regexp.MustCompile("^play ([0-9]+)$")
 
-func isCommand(input string, botID string) bool {
-	return strings.HasPrefix(input, "<@"+botID+">")
-}
-
-func stripName(input string, botID string) string {
-	return strings.Replace(input, "<@"+botID+"> ", "", 1)
-}
-
-func isStartCommand(input string) bool {
-	return strings.HasPrefix(input, PlayToken)
-}
-
-func isGameCommand(input string) bool {
-	return strings.HasPrefix(input, MoveToken) ||
-		strings.HasPrefix(input, PassToken) ||
-		strings.HasPrefix(input, ShowToken) ||
-		strings.HasPrefix(input, ScoreToken)
-}
-
-func isInfoCommand(input string) bool {
-	return strings.HasPrefix(input, ListToken)
-}
-
-// ParseStartCommand parses a command that starts a new game
-func ParseStartCommand(command string) (Command, error) {
-	args := strings.Split(command, " ")
-	if len(args) < 1 {
-		return nil, fmt.Errorf("could not understand %s", command)
+// ParseCommand parses a command from an input string
+func ParseCommand(input string) (Command, error) {
+	if StartRegex.MatchString(input) {
+		matches := StartRegex.FindStringSubmatch(input)
+		return parseStartCommand(matches[1:])
 	}
-	switch args[0] {
-	case PlayToken:
-		return parsePlayCommand(args[1:])
-	default:
-		return nil, fmt.Errorf("could not understand %s", command)
+	if TwoPlayerStartRegex.MatchString(input) {
+		matches := TwoPlayerStartRegex.FindStringSubmatch(input)
+		return parseStartCommand(matches[1:])
 	}
+	if MoveRegex.MatchString(input) {
+		matches := MoveRegex.FindStringSubmatch(input)
+		return parseMoveCommand(matches[1:])
+	}
+	if GameMoveRegex.MatchString(input) {
+		matches := GameMoveRegex.FindStringSubmatch(input)
+		return parseGameMoveCommand(matches[1:])
+	}
+	if VoteRegex.MatchString(input) {
+		matches := VoteRegex.FindStringSubmatch(input)
+		return parseVoteCommand(matches[1:])
+	}
+	if GameVoteRegex.MatchString(input) {
+		matches := GameVoteRegex.FindStringSubmatch(input)
+		return parseGameVoteCommand(matches[1:])
+	}
+	if PlayRegex.MatchString(input) {
+		matches := PlayRegex.FindStringSubmatch(input)
+		return parsePlayCommand(matches[1:])
+	}
+	if GamePlayRegex.MatchString(input) {
+		matches := GamePlayRegex.FindStringSubmatch(input)
+		return parsePlayCommand(matches[1:])
+	}
+	return nil, fmt.Errorf("%s not understood", input)
 }
 
-// ParseGameCommand parses a command that targets a specific game, and returns
-// a game locator that can be used to find the target game.
-func ParseGameCommand(command string) (Command, *GameLocator, error) {
-	args := strings.Split(command, " ")
-	if len(args) < 1 {
-		return nil, nil, fmt.Errorf("could not understand %s", command)
-	}
-	switch args[0] {
-	case MoveToken:
-		return parseMoveCommand(args[1:])
-	case PassToken:
-		return parsePassCommand(args[1:])
-	case ShowToken:
-		return parseShowCommand(args[1:])
-	case ScoreToken:
-		return parseScoreCommand(args[1:])
-	default:
-		return nil, nil, fmt.Errorf("could not understand %s", command)
-	}
-}
-
-// ParseInfoCommand parses a command that does not operate on a game, but might
-// list games, rank users, etc.
-func ParseInfoCommand(command string) (Command, error) {
-	args := strings.Split(command, " ")
-	if len(args) < 1 {
-		return nil, fmt.Errorf("could not understand %s", command)
-	}
-	switch args[0] {
-	case ListToken:
-		return parseListCommand(args[1:])
-	default:
-		return nil, fmt.Errorf("could not understand %s", command)
-	}
-}
-
-func parsePlayCommand(players []string) (*PlayCommand, error) {
+func parseStartCommand(players []string) (*StartCommand, error) {
 	switch len(players) {
 	// Two players only
 	case 2:
-		return &PlayCommand{
+		return &StartCommand{
 			Players: Players{
 				Black: []string{players[0]},
 				White: []string{players[1]},
@@ -138,13 +83,13 @@ func parsePlayCommand(players []string) (*PlayCommand, error) {
 		}, nil
 	// Allow anyone to vote for moves
 	case 0:
-		return &PlayCommand{
+		return &StartCommand{
 			Players: Players{
 				Anyone: true,
 			},
 			Settings: Settings{
 				Vote:  true,
-				Timer: 3600, // 1 hour
+				Timer: 3600 * time.Second, // 1 hour
 			},
 		}, nil
 	default:
@@ -153,9 +98,9 @@ func parsePlayCommand(players []string) (*PlayCommand, error) {
 
 }
 
-func parseCoordinates(coords string) ([2]int, error) {
+func parseCoordinates(coords string) (Coords, error) {
 	// coords will be something like A12
-	result := [2]int{0, 0}
+	result := Coords{0, 0}
 	if len(coords) < 2 {
 		return result, fmt.Errorf("invalid coordinate")
 	}
@@ -169,80 +114,86 @@ func parseCoordinates(coords string) ([2]int, error) {
 	}
 	result[0] = number - 1        // x
 	result[1] = int(letter - 'A') // y
-	return result, nil
+	return Coords(result), nil
 }
 
-func parseMoveCommand(args []string) (*MoveCommand, *GameLocator, error) {
+func parseMoveCommand(args []string) (*MoveCommand, error) {
 	if len(args) < 1 {
-		return nil, nil, fmt.Errorf("need to play a move")
+		return nil, fmt.Errorf("need to play a move")
 	}
-	gameID, err := strconv.Atoi(args[0])
-	if err == nil {
-		if len(args) < 2 {
-			return nil, nil, fmt.Errorf("need to play a move")
-		}
-		coords, err := parseCoordinates(args[1])
-		if err != nil {
-			return nil, nil, err
-		}
+	if args[0] == "pass" {
 		return &MoveCommand{
-				Coordinates: coords,
-			}, &GameLocator{
-				GameID: gameID,
-			}, nil
+			Pass:    true,
+			Locator: GameLocator{Auto: true},
+		}, nil
 	}
 	coords, err := parseCoordinates(args[0])
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	return &MoveCommand{
-			Coordinates: coords,
-		}, &GameLocator{
-			Auto: true,
-		}, nil
+		Coordinates: coords,
+		Locator:     GameLocator{Auto: true},
+	}, nil
 }
 
-func parsePassCommand(args []string) (*PassCommand, *GameLocator, error) {
-	if len(args) < 1 {
-		return &PassCommand{}, &GameLocator{Auto: true}, nil
+func parseGameMoveCommand(args []string) (*MoveCommand, error) {
+	if len(args) < 2 {
+		return nil, fmt.Errorf("need to play a game and move id")
 	}
 	gameID, err := strconv.Atoi(args[0])
-	if err == nil {
-		return &PassCommand{}, &GameLocator{GameID: gameID}, nil
+	if err != nil {
+		return nil, err
 	}
-	return nil, nil, fmt.Errorf("invalid game id %s", args[0])
-}
-
-func parseShowCommand(args []string) (*ShowCommand, *GameLocator, error) {
-	if len(args) < 1 {
-		return &ShowCommand{}, &GameLocator{Auto: true}, nil
-	}
-	gameID, err := strconv.Atoi(args[0])
-	if err == nil {
-		return &ShowCommand{}, &GameLocator{GameID: gameID}, nil
-	}
-	return nil, nil, fmt.Errorf("invalid game id %s", args[0])
-}
-
-func parseScoreCommand(args []string) (*ScoreCommand, *GameLocator, error) {
-	if len(args) < 1 {
-		return &ScoreCommand{}, &GameLocator{Auto: true}, nil
-	}
-	gameID, err := strconv.Atoi(args[0])
-	if err == nil {
-		return &ScoreCommand{}, &GameLocator{GameID: gameID}, nil
-	}
-	return nil, nil, fmt.Errorf("invalid game id %s", args[0])
-}
-
-func parseListCommand(args []string) (*ListCommand, error) {
-	if len(args) < 1 {
-		return &ListCommand{}, nil
-	}
-	if args[0] == "all" {
-		return &ListCommand{
-			All: true,
+	if args[1] == "pass" {
+		return &MoveCommand{
+			Pass:    true,
+			Locator: GameLocator{GameID: gameID},
 		}, nil
 	}
-	return nil, fmt.Errorf("unknown value %s", args[0])
+	coords, err := parseCoordinates(args[1])
+	if err != nil {
+		return nil, err
+	}
+	return &MoveCommand{
+		Coordinates: coords,
+		Locator:     GameLocator{GameID: gameID},
+	}, nil
+}
+
+func parseVoteCommand(args []string) (*VoteCommand, error) {
+	move, err := parseMoveCommand(args)
+	if err != nil {
+		return nil, err
+	}
+	vote := VoteCommand(*move)
+	return &vote, nil
+}
+
+func parseGameVoteCommand(args []string) (*VoteCommand, error) {
+	move, err := parseGameMoveCommand(args)
+	if err != nil {
+		return nil, err
+	}
+	vote := VoteCommand(*move)
+	return &vote, nil
+}
+
+func parsePlayCommand(args []string) (*PlayCommand, error) {
+	return &PlayCommand{
+		Locator: GameLocator{Auto: true},
+	}, nil
+}
+
+func parseGamePlayCommand(args []string) (*PlayCommand, error) {
+	if len(args) < 1 {
+		return nil, fmt.Errorf("missing game id")
+	}
+	gameID, err := strconv.Atoi(args[0])
+	if err != nil {
+		return nil, err
+	}
+	return &PlayCommand{
+		Locator: GameLocator{GameID: gameID},
+	}, nil
 }

@@ -1,7 +1,6 @@
 package gobot
 
 import (
-	"math/rand"
 	"reflect"
 	"testing"
 )
@@ -166,7 +165,6 @@ func TestGameMove(t *testing.T) {
 				Settings: Settings{},
 				Captures: Captures{0, 0},
 				Passes:   Passes{},
-				Votes:    map[string]Vote{},
 				Finished: false,
 			},
 			expect: &Game{
@@ -184,7 +182,6 @@ func TestGameMove(t *testing.T) {
 				Settings: Settings{},
 				Captures: Captures{0, 0},
 				Passes:   Passes{},
-				Votes:    map[string]Vote{},
 				Finished: false,
 			},
 			player: "foo",
@@ -341,181 +338,6 @@ func TestGameMove(t *testing.T) {
 	}
 }
 
-func TestGameVoteForMove(t *testing.T) {
-	cases := []struct {
-		desc   string
-		game   *Game
-		player string
-		coords [2]int
-		expect *Game
-		err    bool
-	}{
-		{
-			desc: "anyone vote at A1",
-			game: &Game{
-				History: History([]Board{[][]Stone{
-					{EmptyStone, EmptyStone},
-					{EmptyStone, EmptyStone},
-				}}),
-				Next:     BlackStone,
-				Players:  Players{Anyone: true},
-				Settings: Settings{Vote: true},
-				Captures: Captures{0, 0},
-				Passes:   Passes{},
-				Votes:    map[string]Vote{},
-				Finished: false,
-			},
-			expect: &Game{
-				History: History([]Board{
-					[][]Stone{
-						{EmptyStone, EmptyStone},
-						{EmptyStone, EmptyStone},
-					},
-				}),
-				Next:     BlackStone,
-				Players:  Players{Anyone: true},
-				Settings: Settings{Vote: true},
-				Captures: Captures{0, 0},
-				Passes:   Passes{},
-				Votes:    map[string]Vote{"foo": {Move: [2]int{0, 0}}},
-				Finished: false,
-			},
-			player: "foo",
-			coords: [2]int{0, 0},
-			err:    false,
-		}, {
-			desc: "unauthorized move at A1",
-			game: &Game{
-				History: History([]Board{[][]Stone{
-					{EmptyStone, EmptyStone},
-					{EmptyStone, EmptyStone},
-				}}),
-				Next:     BlackStone,
-				Players:  Players{Anyone: false},
-				Settings: Settings{Vote: true},
-			},
-			expect: &Game{
-				History: History([]Board{[][]Stone{
-					{EmptyStone, EmptyStone},
-					{EmptyStone, EmptyStone},
-				}}),
-				Next:     BlackStone,
-				Players:  Players{Anyone: false},
-				Settings: Settings{Vote: true},
-			},
-			player: "foo",
-			coords: [2]int{0, 0},
-			err:    true,
-		}, {
-			desc: "ko at A2",
-			game: &Game{
-				History: History([]Board{
-					[][]Stone{
-						{EmptyStone, BlackStone, WhiteStone},
-						{BlackStone, WhiteStone, EmptyStone},
-						{EmptyStone, EmptyStone, EmptyStone},
-					}, [][]Stone{
-						{WhiteStone, EmptyStone, WhiteStone},
-						{BlackStone, WhiteStone, EmptyStone},
-						{EmptyStone, EmptyStone, EmptyStone},
-					}}),
-				Next:     BlackStone,
-				Players:  Players{Anyone: true},
-				Settings: Settings{Vote: true},
-			},
-			expect: &Game{
-				History: History([]Board{
-					[][]Stone{
-						{EmptyStone, BlackStone, WhiteStone},
-						{BlackStone, WhiteStone, EmptyStone},
-						{EmptyStone, EmptyStone, EmptyStone},
-					}, [][]Stone{
-						{WhiteStone, EmptyStone, WhiteStone},
-						{BlackStone, WhiteStone, EmptyStone},
-						{EmptyStone, EmptyStone, EmptyStone},
-					}}),
-				Next:     BlackStone,
-				Players:  Players{Anyone: true},
-				Settings: Settings{Vote: true},
-			},
-			player: "foo",
-			coords: [2]int{1, 0},
-			err:    true,
-		},
-	}
-	for _, test := range cases {
-		err := test.game.VoteForMove(test.player, test.coords)
-		if err != nil && !test.err {
-			t.Errorf("unexpected error %s for %s", err.Error(), test.desc)
-		} else if err == nil && test.err {
-			t.Errorf("expected error for %s", test.desc)
-		} else if !reflect.DeepEqual(test.game, test.expect) {
-			t.Errorf(
-				"%s\nexpected\n%#v\nbut got\n%#v\n",
-				test.desc, test.expect, test.game,
-			)
-		}
-	}
-}
-
-func TestGameVoteForPass(t *testing.T) {
-	cases := []struct {
-		desc   string
-		game   *Game
-		player string
-		expect *Game
-		err    bool
-	}{
-		{
-			desc: "vote for pass",
-			game: &Game{
-				Next:     BlackStone,
-				Players:  Players{Anyone: true},
-				Settings: Settings{Vote: true},
-				Passes:   Passes{},
-				Votes:    map[string]Vote{},
-				Finished: false,
-			},
-			expect: &Game{
-				Next:     BlackStone,
-				Players:  Players{Anyone: true},
-				Settings: Settings{Vote: true},
-				Captures: Captures{0, 0},
-				Passes:   Passes{},
-				Votes:    map[string]Vote{"foo": {Pass: true}},
-				Finished: false,
-			},
-			player: "foo",
-			err:    false,
-		}, {
-			desc: "unauthorized pass",
-			game: &Game{
-				Next:    BlackStone,
-				Players: Players{Anyone: false},
-			},
-			expect: &Game{
-				Next:    BlackStone,
-				Players: Players{Anyone: false},
-			},
-			player: "foo",
-			err:    true,
-		},
-	}
-	for _, test := range cases {
-		err := test.game.VoteForPass(test.player)
-		if err != nil && !test.err {
-			t.Errorf("unexpected error %s for %s", err.Error(), test.desc)
-		} else if err == nil && test.err {
-			t.Errorf("expected error for %s", test.desc)
-		} else if !reflect.DeepEqual(test.game, test.expect) {
-			t.Errorf(
-				"%s\nexpected\n%#v\nbut got\n%#v\n",
-				test.desc, test.expect, test.game,
-			)
-		}
-	}
-}
-
 func TestGamePass(t *testing.T) {
 	cases := []struct {
 		desc   string
@@ -531,7 +353,6 @@ func TestGamePass(t *testing.T) {
 				Players:  Players{Anyone: true},
 				Settings: Settings{},
 				Passes:   Passes{},
-				Votes:    map[string]Vote{},
 				Finished: false,
 			},
 			expect: &Game{
@@ -540,7 +361,6 @@ func TestGamePass(t *testing.T) {
 				Settings: Settings{},
 				Captures: Captures{0, 0},
 				Passes:   Passes{Black: true},
-				Votes:    map[string]Vote{},
 				Finished: false,
 			},
 			player: "foo",
@@ -552,7 +372,6 @@ func TestGamePass(t *testing.T) {
 				Players:  Players{Anyone: true},
 				Settings: Settings{},
 				Passes:   Passes{},
-				Votes:    map[string]Vote{},
 				Finished: false,
 			},
 			expect: &Game{
@@ -561,7 +380,6 @@ func TestGamePass(t *testing.T) {
 				Settings: Settings{},
 				Captures: Captures{0, 0},
 				Passes:   Passes{White: true},
-				Votes:    map[string]Vote{},
 				Finished: false,
 			},
 			player: "foo",
@@ -575,102 +393,6 @@ func TestGamePass(t *testing.T) {
 		} else if err == nil && test.err {
 			t.Errorf("expected error for %s", test.desc)
 		} else if !reflect.DeepEqual(test.game, test.expect) {
-			t.Errorf(
-				"%s\nexpected\n%#v\nbut got\n%#v\n",
-				test.desc, test.expect, test.game,
-			)
-		}
-	}
-}
-
-func TestPickRandomVote(t *testing.T) {
-	cases := []struct {
-		desc   string
-		rng    *rand.Rand
-		game   *Game
-		expect *Game
-		err    bool
-	}{
-		{
-			desc: "foo vote at B1",
-			rng:  rand.New(rand.NewSource(4)),
-			game: &Game{
-				History: History([]Board{[][]Stone{
-					{EmptyStone, EmptyStone},
-					{EmptyStone, EmptyStone},
-				}}),
-				Next:     BlackStone,
-				Players:  Players{Anyone: true},
-				Settings: Settings{Vote: true},
-				Captures: Captures{0, 0},
-				Passes:   Passes{},
-				Votes: map[string]Vote{
-					"bar": {Move: [2]int{0, 0}},
-					"foo": {Move: [2]int{1, 1}},
-				},
-				Finished: false,
-			},
-			expect: &Game{
-				History: History([]Board{
-					[][]Stone{
-						{EmptyStone, EmptyStone},
-						{EmptyStone, EmptyStone},
-					},
-					[][]Stone{
-						{EmptyStone, EmptyStone},
-						{EmptyStone, BlackStone},
-					},
-				}),
-				Next:     WhiteStone,
-				Players:  Players{Anyone: true},
-				Settings: Settings{Vote: true},
-				Captures: Captures{0, 0},
-				Passes:   Passes{},
-				Votes:    map[string]Vote{},
-				Finished: false,
-			},
-			err: false,
-		},
-		{
-			desc: "foo vote for pass",
-			rng:  rand.New(rand.NewSource(4)),
-			game: &Game{
-				History: History([]Board{[][]Stone{
-					{EmptyStone, EmptyStone},
-					{EmptyStone, EmptyStone},
-				}}),
-				Next:     BlackStone,
-				Players:  Players{Anyone: true},
-				Settings: Settings{Vote: true},
-				Captures: Captures{0, 0},
-				Passes:   Passes{},
-				Votes: map[string]Vote{
-					"bar": {Move: [2]int{0, 0}},
-					"foo": {Pass: true},
-				},
-				Finished: false,
-			},
-			expect: &Game{
-				History: History([]Board{
-					[][]Stone{
-						{EmptyStone, EmptyStone},
-						{EmptyStone, EmptyStone},
-					},
-				}),
-				Next:     WhiteStone,
-				Players:  Players{Anyone: true},
-				Settings: Settings{Vote: true},
-				Captures: Captures{0, 0},
-				Passes:   Passes{Black: true},
-				Votes:    map[string]Vote{},
-				Finished: false,
-			},
-			err: false,
-		},
-	}
-	for _, test := range cases {
-		test.game.PickRandomVote(test.rng)
-		if !reflect.DeepEqual(test.game, test.expect) {
 			t.Errorf(
 				"%s\nexpected\n%#v\nbut got\n%#v\n",
 				test.desc, test.expect, test.game,

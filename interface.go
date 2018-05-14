@@ -121,11 +121,10 @@ func (i *SlackInterface) StartReceiving(server *Server) {
 			if ev.SubType == "" && i.IsSlackCommand(ev.Text) {
 				i.Channel = ev.Channel
 				command := i.ConvertSlackCommand(ev.Text)
-				reply, err := server.Handle(command, ev.User)
+				err := server.Handle(command, ev.User)
 				if err != nil {
 					i.sendText(err.Error())
 				}
-				server.Replies <- reply
 			}
 		}
 	}
