@@ -20,7 +20,10 @@ type StartCommand struct {
 func (c *StartCommand) Execute(
 	player string, games GameStore, votes VoteStore, schedulers SchedulerStore,
 ) (*Response, error) {
-	game := games.New(c.Players, c.Settings)
+	game, err := games.New(c.Players, c.Settings)
+	if err != nil {
+		return nil, err
+	}
 	votes.New(game)
 	scheduler := schedulers.New(game)
 	go scheduler.StartVoting(game, &votes)
@@ -50,9 +53,17 @@ func (c *MoveCommand) Execute(
 		if err != nil {
 			return nil, err
 		}
+		err = games.Save(game)
+		if err != nil {
+			return nil, err
+		}
 		return NewGameResponse(game, "passed"), nil
 	}
 	err = game.Move(player, c.Coordinates)
+	if err != nil {
+		return nil, err
+	}
+	err = games.Save(game)
 	if err != nil {
 		return nil, err
 	}
@@ -105,6 +116,10 @@ func (c *PlayCommand) Execute(
 		return nil, errors.New("no votes cast")
 	}
 	err = game.Vote(player, vote)
+	if err != nil {
+		return nil, err
+	}
+	err = games.Save(game)
 	if err != nil {
 		return nil, err
 	}

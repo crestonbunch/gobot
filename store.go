@@ -1,6 +1,7 @@
 package gobot
 
 import (
+	"database/sql"
 	"fmt"
 	"math/rand"
 	"sort"
@@ -8,7 +9,18 @@ import (
 )
 
 // GameStore stores a map of game IDs to corresponding games
-type GameStore map[int]*Game
+type GameStore struct {
+	Games map[int64]*Game
+	DB    *sql.DB
+}
+
+// NewGameStore creates a game store connected to a database
+func NewGameStore(db *sql.DB) GameStore {
+	return GameStore{
+		Games: map[int64]*Game{},
+		DB:    db,
+	}
+}
 
 // GameList is a list of games in some order
 type GameList []*Game
@@ -28,23 +40,10 @@ func (l GameList) Less(i, j int) bool {
 	return l[i].UpdatedAt.Before(l[j].UpdatedAt)
 }
 
-// New creates a new game and adds it to the store
-func (s GameStore) New(players Players, settings Settings) *Game {
-	id := len(s)
-	g := NewGame(id, players, settings)
-	s[g.ID] = g
-	return g
-}
-
-// Add adds a game to the store
-func (s GameStore) Add(g *Game) {
-	s[g.ID] = g
-}
-
 // ToList gets a list of the games in the store
 func (s GameStore) ToList() GameList {
 	list := []*Game{}
-	for _, game := range s {
+	for _, game := range s.Games {
 		list = append(list, game)
 	}
 	return list
@@ -64,7 +63,12 @@ type Vote struct {
 }
 
 // VoteStore stores the current set of votes per game
-type VoteStore map[int]map[string]*Vote
+type VoteStore map[int64]map[string]*Vote
+
+// NewVoteStore creates an empty vote store
+func NewVoteStore() VoteStore {
+	return map[int64]map[string]*Vote{}
+}
 
 // New creates a new vote store for a game
 func (s VoteStore) New(game *Game) {
@@ -148,14 +152,14 @@ func (s *Scheduler) StartVoting(game *Game, votes *VoteStore) {
 
 // A SchedulerStore stores schedulers for games
 type SchedulerStore struct {
-	Schedulers map[int]*Scheduler
+	Schedulers map[int64]*Scheduler
 	Responses  chan *Response
 }
 
 // NewSchedulerStore creates a new scheduler store
 func NewSchedulerStore(responses chan *Response) SchedulerStore {
 	return SchedulerStore{
-		Schedulers: map[int]*Scheduler{},
+		Schedulers: map[int64]*Scheduler{},
 		Responses:  responses,
 	}
 }

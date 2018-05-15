@@ -59,7 +59,7 @@ func (h History) Ko(b Board) bool {
 
 // Game stores the entire game state for a single game
 type Game struct {
-	ID        int       `json:"id"`
+	ID        int64     `json:"-"`
 	History   History   `json:"history"`
 	Next      Stone     `json:"next"`
 	Players   Players   `json:"players"`
@@ -69,22 +69,6 @@ type Game struct {
 	Finished  bool      `json:"finished"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
-}
-
-// NewGame creates a new game with the given players and settings
-func NewGame(id int, players Players, settings Settings) *Game {
-	return &Game{
-		ID:        id,
-		History:   History([]Board{New19by19Board()}),
-		Next:      BlackStone,
-		Players:   players,
-		Settings:  settings,
-		Captures:  Captures{0, 0},
-		Passes:    Passes{},
-		Finished:  false,
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
-	}
 }
 
 // Board gets the current board state

@@ -1,11 +1,19 @@
 package gobot
 
 import (
+	"database/sql"
 	"testing"
 	"time"
+
+	_ "github.com/mattn/go-sqlite3"
 )
 
 func TestStartCommand(t *testing.T) {
+	db, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+	defer db.Close()
 	cases := []struct {
 		command        *StartCommand
 		player         string
@@ -20,19 +28,23 @@ func TestStartCommand(t *testing.T) {
 				Settings: Settings{Vote: false},
 			},
 			player:         "foo",
-			gameStore:      map[int]*Game{},
-			voteStore:      map[int]map[string]*Vote{},
+			gameStore:      NewGameStore(db),
+			voteStore:      NewVoteStore(),
 			schedulerStore: NewSchedulerStore(make(chan *Response)),
 		},
 	}
 	for _, test := range cases {
+		err := test.gameStore.Init()
+		if err != nil {
+			t.Fatalf(err.Error())
+		}
 		response, err := test.command.Execute(
 			test.player, test.gameStore, test.voteStore, test.schedulerStore,
 		)
-		if err == nil && test.err {
-			t.Errorf("unexpected error for %#v", test)
-		}
 		if err != nil && !test.err {
+			t.Errorf("unexpected error %s for %#v", err.Error(), test)
+		}
+		if err == nil && test.err {
 			t.Errorf("expected error for %#v", test)
 		}
 		if response != nil && response.Game == nil {
@@ -42,6 +54,11 @@ func TestStartCommand(t *testing.T) {
 }
 
 func TestMoveCommand(t *testing.T) {
+	db, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+	defer db.Close()
 	cases := []struct {
 		desc           string
 		command        *MoveCommand
@@ -58,17 +75,20 @@ func TestMoveCommand(t *testing.T) {
 				Locator:     GameLocator{Auto: true},
 			},
 			player: "foo",
-			gameStore: map[int]*Game{
-				1: {
-					ID: 1,
-					History: []Board{{
-						[]Stone{EmptyStone, EmptyStone},
-						[]Stone{EmptyStone, EmptyStone},
-					}},
-					Next:     BlackStone,
-					Players:  Players{Anyone: true},
-					Settings: Settings{Vote: false},
+			gameStore: GameStore{
+				Games: map[int64]*Game{
+					1: {
+						ID: 1,
+						History: []Board{{
+							[]Stone{EmptyStone, EmptyStone},
+							[]Stone{EmptyStone, EmptyStone},
+						}},
+						Next:     BlackStone,
+						Players:  Players{Anyone: true},
+						Settings: Settings{Vote: false},
+					},
 				},
+				DB: db,
 			},
 			err: false,
 		}, {
@@ -78,17 +98,20 @@ func TestMoveCommand(t *testing.T) {
 				Locator:     GameLocator{GameID: 1},
 			},
 			player: "foo",
-			gameStore: map[int]*Game{
-				1: {
-					ID: 1,
-					History: []Board{{
-						[]Stone{EmptyStone, EmptyStone},
-						[]Stone{EmptyStone, EmptyStone},
-					}},
-					Next:     BlackStone,
-					Players:  Players{Anyone: true},
-					Settings: Settings{Vote: false},
+			gameStore: GameStore{
+				Games: map[int64]*Game{
+					1: {
+						ID: 1,
+						History: []Board{{
+							[]Stone{EmptyStone, EmptyStone},
+							[]Stone{EmptyStone, EmptyStone},
+						}},
+						Next:     BlackStone,
+						Players:  Players{Anyone: true},
+						Settings: Settings{Vote: false},
+					},
 				},
+				DB: db,
 			},
 			err: false,
 		}, {
@@ -98,19 +121,22 @@ func TestMoveCommand(t *testing.T) {
 				Locator:     GameLocator{GameID: 1},
 			},
 			player: "foo",
-			gameStore: map[int]*Game{
-				1: {
-					ID: 1,
-					History: []Board{{
-						[]Stone{EmptyStone, EmptyStone},
-						[]Stone{EmptyStone, EmptyStone},
-					}},
-					Next: BlackStone,
-					Players: Players{
-						Black: []string{"foo"}, White: []string{"bar"},
+			gameStore: GameStore{
+				Games: map[int64]*Game{
+					1: {
+						ID: 1,
+						History: []Board{{
+							[]Stone{EmptyStone, EmptyStone},
+							[]Stone{EmptyStone, EmptyStone},
+						}},
+						Next: BlackStone,
+						Players: Players{
+							Black: []string{"foo"}, White: []string{"bar"},
+						},
+						Settings: Settings{Vote: false},
 					},
-					Settings: Settings{Vote: false},
 				},
+				DB: db,
 			},
 			err: false,
 		}, {
@@ -120,19 +146,22 @@ func TestMoveCommand(t *testing.T) {
 				Locator:     GameLocator{GameID: 1},
 			},
 			player: "bar",
-			gameStore: map[int]*Game{
-				1: {
-					ID: 1,
-					History: []Board{{
-						[]Stone{EmptyStone, EmptyStone},
-						[]Stone{EmptyStone, EmptyStone},
-					}},
-					Next: BlackStone,
-					Players: Players{
-						Black: []string{"foo"}, White: []string{"bar"},
+			gameStore: GameStore{
+				Games: map[int64]*Game{
+					1: {
+						ID: 1,
+						History: []Board{{
+							[]Stone{EmptyStone, EmptyStone},
+							[]Stone{EmptyStone, EmptyStone},
+						}},
+						Next: BlackStone,
+						Players: Players{
+							Black: []string{"foo"}, White: []string{"bar"},
+						},
+						Settings: Settings{Vote: false},
 					},
-					Settings: Settings{Vote: false},
 				},
+				DB: db,
 			},
 			err: true,
 		}, {
@@ -142,19 +171,22 @@ func TestMoveCommand(t *testing.T) {
 				Locator:     GameLocator{GameID: 1},
 			},
 			player: "foo",
-			gameStore: map[int]*Game{
-				1: {
-					ID: 1,
-					History: []Board{{
-						[]Stone{EmptyStone, EmptyStone},
-						[]Stone{EmptyStone, EmptyStone},
-					}},
-					Next: BlackStone,
-					Players: Players{
-						Black: []string{"foo"}, White: []string{"bar"},
+			gameStore: GameStore{
+				Games: map[int64]*Game{
+					1: {
+						ID: 1,
+						History: []Board{{
+							[]Stone{EmptyStone, EmptyStone},
+							[]Stone{EmptyStone, EmptyStone},
+						}},
+						Next: BlackStone,
+						Players: Players{
+							Black: []string{"foo"}, White: []string{"bar"},
+						},
+						Settings: Settings{Vote: true},
 					},
-					Settings: Settings{Vote: true},
 				},
+				DB: db,
 			},
 			err: true,
 		}, {
@@ -164,19 +196,22 @@ func TestMoveCommand(t *testing.T) {
 				Locator: GameLocator{GameID: 1},
 			},
 			player: "foo",
-			gameStore: map[int]*Game{
-				1: {
-					ID: 1,
-					History: []Board{{
-						[]Stone{EmptyStone, EmptyStone},
-						[]Stone{EmptyStone, EmptyStone},
-					}},
-					Next: BlackStone,
-					Players: Players{
-						Black: []string{"foo"}, White: []string{"bar"},
+			gameStore: GameStore{
+				Games: map[int64]*Game{
+					1: {
+						ID: 1,
+						History: []Board{{
+							[]Stone{EmptyStone, EmptyStone},
+							[]Stone{EmptyStone, EmptyStone},
+						}},
+						Next: BlackStone,
+						Players: Players{
+							Black: []string{"foo"}, White: []string{"bar"},
+						},
+						Settings: Settings{Vote: false},
 					},
-					Settings: Settings{Vote: false},
 				},
+				DB: db,
 			},
 			err: false,
 		}, {
@@ -186,19 +221,22 @@ func TestMoveCommand(t *testing.T) {
 				Locator: GameLocator{GameID: 1},
 			},
 			player: "bar",
-			gameStore: map[int]*Game{
-				1: {
-					ID: 1,
-					History: []Board{{
-						[]Stone{EmptyStone, EmptyStone},
-						[]Stone{EmptyStone, EmptyStone},
-					}},
-					Next: BlackStone,
-					Players: Players{
-						Black: []string{"foo"}, White: []string{"bar"},
+			gameStore: GameStore{
+				Games: map[int64]*Game{
+					1: {
+						ID: 1,
+						History: []Board{{
+							[]Stone{EmptyStone, EmptyStone},
+							[]Stone{EmptyStone, EmptyStone},
+						}},
+						Next: BlackStone,
+						Players: Players{
+							Black: []string{"foo"}, White: []string{"bar"},
+						},
+						Settings: Settings{Vote: false},
 					},
-					Settings: Settings{Vote: false},
 				},
+				DB: db,
 			},
 			err: true,
 		}, {
@@ -208,11 +246,15 @@ func TestMoveCommand(t *testing.T) {
 				Locator:     GameLocator{GameID: 1},
 			},
 			player:    "bar",
-			gameStore: map[int]*Game{},
+			gameStore: NewGameStore(db),
 			err:       true,
 		},
 	}
 	for _, test := range cases {
+		err := test.gameStore.Init()
+		if err != nil {
+			t.Fatalf(err.Error())
+		}
 		response, err := test.command.Execute(
 			test.player, test.gameStore, test.voteStore, test.schedulerStore,
 		)
@@ -229,6 +271,11 @@ func TestMoveCommand(t *testing.T) {
 }
 
 func TestVoteCommand(t *testing.T) {
+	db, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+	defer db.Close()
 	cases := []struct {
 		desc           string
 		command        *VoteCommand
@@ -245,19 +292,22 @@ func TestVoteCommand(t *testing.T) {
 				Locator:     GameLocator{Auto: true},
 			},
 			player: "foo",
-			gameStore: map[int]*Game{
-				1: {
-					ID: 1,
-					History: []Board{{
-						[]Stone{EmptyStone, EmptyStone},
-						[]Stone{EmptyStone, EmptyStone},
-					}},
-					Next:     BlackStone,
-					Players:  Players{Anyone: true},
-					Settings: Settings{Vote: true},
+			gameStore: GameStore{
+				Games: map[int64]*Game{
+					1: {
+						ID: 1,
+						History: []Board{{
+							[]Stone{EmptyStone, EmptyStone},
+							[]Stone{EmptyStone, EmptyStone},
+						}},
+						Next:     BlackStone,
+						Players:  Players{Anyone: true},
+						Settings: Settings{Vote: true},
+					},
 				},
+				DB: db,
 			},
-			voteStore: map[int]map[string]*Vote{},
+			voteStore: NewVoteStore(),
 			err:       false,
 		}, {
 			desc: "anyone vote game id locate",
@@ -266,19 +316,22 @@ func TestVoteCommand(t *testing.T) {
 				Locator:     GameLocator{GameID: 1},
 			},
 			player: "foo",
-			gameStore: map[int]*Game{
-				1: {
-					ID: 1,
-					History: []Board{{
-						[]Stone{EmptyStone, EmptyStone},
-						[]Stone{EmptyStone, EmptyStone},
-					}},
-					Next:     BlackStone,
-					Players:  Players{Anyone: true},
-					Settings: Settings{Vote: true},
+			gameStore: GameStore{
+				Games: map[int64]*Game{
+					1: {
+						ID: 1,
+						History: []Board{{
+							[]Stone{EmptyStone, EmptyStone},
+							[]Stone{EmptyStone, EmptyStone},
+						}},
+						Next:     BlackStone,
+						Players:  Players{Anyone: true},
+						Settings: Settings{Vote: true},
+					},
 				},
+				DB: db,
 			},
-			voteStore: map[int]map[string]*Vote{},
+			voteStore: NewVoteStore(),
 			err:       false,
 		}, {
 			desc: "require foo to vote auto locate",
@@ -287,21 +340,24 @@ func TestVoteCommand(t *testing.T) {
 				Locator:     GameLocator{GameID: 1},
 			},
 			player: "foo",
-			gameStore: map[int]*Game{
-				1: {
-					ID: 1,
-					History: []Board{{
-						[]Stone{EmptyStone, EmptyStone},
-						[]Stone{EmptyStone, EmptyStone},
-					}},
-					Next: BlackStone,
-					Players: Players{
-						Black: []string{"foo"}, White: []string{"bar"},
+			gameStore: GameStore{
+				Games: map[int64]*Game{
+					1: {
+						ID: 1,
+						History: []Board{{
+							[]Stone{EmptyStone, EmptyStone},
+							[]Stone{EmptyStone, EmptyStone},
+						}},
+						Next: BlackStone,
+						Players: Players{
+							Black: []string{"foo"}, White: []string{"bar"},
+						},
+						Settings: Settings{Vote: true},
 					},
-					Settings: Settings{Vote: true},
 				},
+				DB: db,
 			},
-			voteStore: map[int]map[string]*Vote{},
+			voteStore: NewVoteStore(),
 			err:       false,
 		}, {
 			desc: "wrong user to vote auto locate",
@@ -310,21 +366,24 @@ func TestVoteCommand(t *testing.T) {
 				Locator:     GameLocator{GameID: 1},
 			},
 			player: "bar",
-			gameStore: map[int]*Game{
-				1: {
-					ID: 1,
-					History: []Board{{
-						[]Stone{EmptyStone, EmptyStone},
-						[]Stone{EmptyStone, EmptyStone},
-					}},
-					Next: BlackStone,
-					Players: Players{
-						Black: []string{"foo"}, White: []string{"bar"},
+			gameStore: GameStore{
+				Games: map[int64]*Game{
+					1: {
+						ID: 1,
+						History: []Board{{
+							[]Stone{EmptyStone, EmptyStone},
+							[]Stone{EmptyStone, EmptyStone},
+						}},
+						Next: BlackStone,
+						Players: Players{
+							Black: []string{"foo"}, White: []string{"bar"},
+						},
+						Settings: Settings{Vote: true},
 					},
-					Settings: Settings{Vote: true},
 				},
+				DB: db,
 			},
-			voteStore: map[int]map[string]*Vote{},
+			voteStore: NewVoteStore(),
 			err:       true,
 		}, {
 			desc: "voting not allowed",
@@ -333,21 +392,24 @@ func TestVoteCommand(t *testing.T) {
 				Locator:     GameLocator{GameID: 1},
 			},
 			player: "foo",
-			gameStore: map[int]*Game{
-				1: {
-					ID: 1,
-					History: []Board{{
-						[]Stone{EmptyStone, EmptyStone},
-						[]Stone{EmptyStone, EmptyStone},
-					}},
-					Next: BlackStone,
-					Players: Players{
-						Black: []string{"foo"}, White: []string{"bar"},
+			gameStore: GameStore{
+				Games: map[int64]*Game{
+					1: {
+						ID: 1,
+						History: []Board{{
+							[]Stone{EmptyStone, EmptyStone},
+							[]Stone{EmptyStone, EmptyStone},
+						}},
+						Next: BlackStone,
+						Players: Players{
+							Black: []string{"foo"}, White: []string{"bar"},
+						},
+						Settings: Settings{Vote: false},
 					},
-					Settings: Settings{Vote: false},
 				},
+				DB: db,
 			},
-			voteStore: map[int]map[string]*Vote{},
+			voteStore: NewVoteStore(),
 			err:       true,
 		}, {
 			desc: "passing",
@@ -356,21 +418,24 @@ func TestVoteCommand(t *testing.T) {
 				Locator: GameLocator{GameID: 1},
 			},
 			player: "foo",
-			gameStore: map[int]*Game{
-				1: {
-					ID: 1,
-					History: []Board{{
-						[]Stone{EmptyStone, EmptyStone},
-						[]Stone{EmptyStone, EmptyStone},
-					}},
-					Next: BlackStone,
-					Players: Players{
-						Black: []string{"foo"}, White: []string{"bar"},
+			gameStore: GameStore{
+				Games: map[int64]*Game{
+					1: {
+						ID: 1,
+						History: []Board{{
+							[]Stone{EmptyStone, EmptyStone},
+							[]Stone{EmptyStone, EmptyStone},
+						}},
+						Next: BlackStone,
+						Players: Players{
+							Black: []string{"foo"}, White: []string{"bar"},
+						},
+						Settings: Settings{Vote: true},
 					},
-					Settings: Settings{Vote: true},
 				},
+				DB: db,
 			},
-			voteStore: map[int]map[string]*Vote{},
+			voteStore: NewVoteStore(),
 			err:       false,
 		}, {
 			desc: "passing not allowed",
@@ -379,21 +444,24 @@ func TestVoteCommand(t *testing.T) {
 				Locator: GameLocator{GameID: 1},
 			},
 			player: "bar",
-			gameStore: map[int]*Game{
-				1: {
-					ID: 1,
-					History: []Board{{
-						[]Stone{EmptyStone, EmptyStone},
-						[]Stone{EmptyStone, EmptyStone},
-					}},
-					Next: BlackStone,
-					Players: Players{
-						Black: []string{"foo"}, White: []string{"bar"},
+			gameStore: GameStore{
+				Games: map[int64]*Game{
+					1: {
+						ID: 1,
+						History: []Board{{
+							[]Stone{EmptyStone, EmptyStone},
+							[]Stone{EmptyStone, EmptyStone},
+						}},
+						Next: BlackStone,
+						Players: Players{
+							Black: []string{"foo"}, White: []string{"bar"},
+						},
+						Settings: Settings{Vote: true},
 					},
-					Settings: Settings{Vote: true},
 				},
+				DB: db,
 			},
-			voteStore: map[int]map[string]*Vote{},
+			voteStore: NewVoteStore(),
 			err:       true,
 		}, {
 			desc: "locator error",
@@ -402,11 +470,15 @@ func TestVoteCommand(t *testing.T) {
 				Locator:     GameLocator{GameID: 1},
 			},
 			player:    "bar",
-			gameStore: map[int]*Game{},
+			gameStore: NewGameStore(db),
 			err:       true,
 		},
 	}
 	for _, test := range cases {
+		err := test.gameStore.Init()
+		if err != nil {
+			t.Fatalf(err.Error())
+		}
 		response, err := test.command.Execute(
 			test.player, test.gameStore, test.voteStore, test.schedulerStore,
 		)
@@ -423,6 +495,11 @@ func TestVoteCommand(t *testing.T) {
 }
 
 func TestPlayCommand(t *testing.T) {
+	db, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+	defer db.Close()
 	cases := []struct {
 		desc           string
 		command        *PlayCommand
@@ -438,23 +515,26 @@ func TestPlayCommand(t *testing.T) {
 				Locator: GameLocator{Auto: true},
 			},
 			player: "foo",
-			gameStore: map[int]*Game{
-				1: {
-					ID: 1,
-					History: []Board{{
-						[]Stone{EmptyStone, EmptyStone},
-						[]Stone{EmptyStone, EmptyStone},
-					}},
-					Next:     BlackStone,
-					Players:  Players{Anyone: true},
-					Settings: Settings{Vote: true},
+			gameStore: GameStore{
+				Games: map[int64]*Game{
+					1: {
+						ID: 1,
+						History: []Board{{
+							[]Stone{EmptyStone, EmptyStone},
+							[]Stone{EmptyStone, EmptyStone},
+						}},
+						Next:     BlackStone,
+						Players:  Players{Anyone: true},
+						Settings: Settings{Vote: true},
+					},
 				},
+				DB: db,
 			},
-			voteStore: map[int]map[string]*Vote{
+			voteStore: map[int64]map[string]*Vote{
 				1: {"foo": {Move: Coords{0, 0}}},
 			},
 			schedulerStore: SchedulerStore{
-				Schedulers: map[int]*Scheduler{
+				Schedulers: map[int64]*Scheduler{
 					1: {
 						VoteTimer: time.NewTimer(100 * time.Second),
 					},
@@ -468,21 +548,24 @@ func TestPlayCommand(t *testing.T) {
 				Locator: GameLocator{Auto: true},
 			},
 			player: "foo",
-			gameStore: map[int]*Game{
-				1: {
-					ID: 1,
-					History: []Board{{
-						[]Stone{EmptyStone, EmptyStone},
-						[]Stone{EmptyStone, EmptyStone},
-					}},
-					Next:     BlackStone,
-					Players:  Players{Anyone: true},
-					Settings: Settings{Vote: true},
+			gameStore: GameStore{
+				Games: map[int64]*Game{
+					1: {
+						ID: 1,
+						History: []Board{{
+							[]Stone{EmptyStone, EmptyStone},
+							[]Stone{EmptyStone, EmptyStone},
+						}},
+						Next:     BlackStone,
+						Players:  Players{Anyone: true},
+						Settings: Settings{Vote: true},
+					},
 				},
+				DB: db,
 			},
-			voteStore: map[int]map[string]*Vote{},
+			voteStore: NewVoteStore(),
 			schedulerStore: SchedulerStore{
-				Schedulers: map[int]*Scheduler{
+				Schedulers: map[int64]*Scheduler{
 					1: {
 						VoteTimer: time.NewTimer(100 * time.Second),
 					},
@@ -496,26 +579,29 @@ func TestPlayCommand(t *testing.T) {
 				Locator: GameLocator{GameID: 1},
 			},
 			player: "foo",
-			gameStore: map[int]*Game{
-				1: {
-					ID: 1,
-					History: []Board{{
-						[]Stone{EmptyStone, EmptyStone},
-						[]Stone{EmptyStone, EmptyStone},
-					}},
-					Next: WhiteStone,
-					Players: Players{
-						Black: []string{"foo"},
-						White: []string{"bar"},
+			gameStore: GameStore{
+				Games: map[int64]*Game{
+					1: {
+						ID: 1,
+						History: []Board{{
+							[]Stone{EmptyStone, EmptyStone},
+							[]Stone{EmptyStone, EmptyStone},
+						}},
+						Next: WhiteStone,
+						Players: Players{
+							Black: []string{"foo"},
+							White: []string{"bar"},
+						},
+						Settings: Settings{Vote: true},
 					},
-					Settings: Settings{Vote: true},
 				},
+				DB: db,
 			},
-			voteStore: map[int]map[string]*Vote{
+			voteStore: map[int64]map[string]*Vote{
 				1: {"foo": {Move: Coords{0, 0}}},
 			},
 			schedulerStore: SchedulerStore{
-				Schedulers: map[int]*Scheduler{
+				Schedulers: map[int64]*Scheduler{
 					1: {
 						VoteTimer: time.NewTimer(100 * time.Second),
 					},
@@ -529,26 +615,29 @@ func TestPlayCommand(t *testing.T) {
 				Locator: GameLocator{GameID: 1},
 			},
 			player: "bar",
-			gameStore: map[int]*Game{
-				1: {
-					ID: 1,
-					History: []Board{{
-						[]Stone{EmptyStone, EmptyStone},
-						[]Stone{EmptyStone, EmptyStone},
-					}},
-					Next: WhiteStone,
-					Players: Players{
-						Black: []string{"foo"},
-						White: []string{"bar"},
+			gameStore: GameStore{
+				Games: map[int64]*Game{
+					1: {
+						ID: 1,
+						History: []Board{{
+							[]Stone{EmptyStone, EmptyStone},
+							[]Stone{EmptyStone, EmptyStone},
+						}},
+						Next: WhiteStone,
+						Players: Players{
+							Black: []string{"foo"},
+							White: []string{"bar"},
+						},
+						Settings: Settings{Vote: true},
 					},
-					Settings: Settings{Vote: true},
 				},
+				DB: db,
 			},
-			voteStore: map[int]map[string]*Vote{
+			voteStore: map[int64]map[string]*Vote{
 				1: {"bar": {Pass: true}},
 			},
 			schedulerStore: SchedulerStore{
-				Schedulers: map[int]*Scheduler{
+				Schedulers: map[int64]*Scheduler{
 					1: {
 						VoteTimer: time.NewTimer(100 * time.Second),
 					},
@@ -559,6 +648,10 @@ func TestPlayCommand(t *testing.T) {
 		},
 	}
 	for _, test := range cases {
+		err := test.gameStore.Init()
+		if err != nil {
+			t.Fatalf(err.Error())
+		}
 		response, err := test.command.Execute(
 			test.player, test.gameStore, test.voteStore, test.schedulerStore,
 		)

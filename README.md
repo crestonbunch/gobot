@@ -39,13 +39,13 @@ and make sure `pcg` is in your path
 * Rendering image
 * Communicating with slack
 * Vote timer
+* Persistence
 
 ### Todo
 
 * `@gobot score`
 * `@gobot show`
 * `@gobot list`
-* Persistence
 * End game
 
 Stretch goals
@@ -63,13 +63,13 @@ Stretch goals
 2. Start a new game
 
     With everyone in the channel (vote per move):
-    > @gobot play
+    > @gobot start
 
     With two players (black and white respectively):
-    > @gobot play @goseigen @shusaku
+    > @gobot start @goseigen @shusaku
 
     Against yourself
-    > @gobot play @me @me
+    > @gobot start @me @me
 
 3. Make a move
 
@@ -80,9 +80,26 @@ Stretch goals
     > @gobot move 14 D4
 
     Pass
-    > @gobot pass
+    > @gobot move pass
 
-4. Show the board
+4. Vote for a move (a move is randomly selected every 60 minutes)
+
+    Respond to the last move played
+    > @gobot vote D4
+
+    Vot for a move in a particular game (e.g. game 14)
+    > @gobot vote 14 D4
+
+    Pass
+    > @gobot vote pass
+
+    Pick a vote immediately
+    > @gobot play
+
+    Pick a vote immediately for a particular game (e.g. game 14)
+    > @gobot play 14
+
+5. Show the board
 
     Show the last game played
     > @gobot show
@@ -90,7 +107,7 @@ Stretch goals
     Show a particular game (e.g. game 14)
     > @gobot show 14
 
-5. Estimate a game score
+6. Estimate a game score
 
     Estimate the last game played
     > @gobot score
@@ -98,7 +115,7 @@ Stretch goals
     Estimate a particular game (e.g. game 14)
     > @gobot score 14
 
-6. List games
+7. List games
 
     Unfinished games
     > @gobot list

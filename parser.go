@@ -141,7 +141,7 @@ func parseGameMoveCommand(args []string) (*MoveCommand, error) {
 	if len(args) < 2 {
 		return nil, fmt.Errorf("need to play a game and move id")
 	}
-	gameID, err := strconv.Atoi(args[0])
+	gameID, err := strconv.ParseInt(args[0], 10, 64)
 	if err != nil {
 		return nil, err
 	}
@@ -189,7 +189,7 @@ func parseGamePlayCommand(args []string) (*PlayCommand, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("missing game id")
 	}
-	gameID, err := strconv.Atoi(args[0])
+	gameID, err := strconv.ParseInt(args[0], 10, 64)
 	if err != nil {
 		return nil, err
 	}

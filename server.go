@@ -1,5 +1,7 @@
 package gobot
 
+import "database/sql"
+
 // Server handles receiving requests and performing actions.
 type Server struct {
 	NextID     int
@@ -10,18 +12,32 @@ type Server struct {
 }
 
 // New creates a new gobot server to listen to messages
-func New() *Server {
+func New(db *sql.DB) (*Server, error) {
 	responses := make(chan *Response)
 	return &Server{
-		Games:      map[int]*Game{},
-		Votes:      map[int]map[string]*Vote{},
+		Games:      NewGameStore(db),
+		Votes:      NewVoteStore(),
 		Schedulers: NewSchedulerStore(responses),
 		Replies:    responses,
-	}
+	}, nil
 }
 
 // Start starts the bot server
-func (s *Server) Start() {
+func (s *Server) Start() error {
+	err := s.Games.Init()
+	if err != nil {
+		return err
+	}
+	err = s.Games.Load()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// Close closes the bot server connections
+func (s *Server) Close() {
+	s.Games.DB.Close()
 }
 
 // Handle a command and return a response

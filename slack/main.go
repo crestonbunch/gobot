@@ -1,8 +1,11 @@
 package main
 
 import (
+	"database/sql"
 	"log"
 	"os"
+
+	_ "github.com/mattn/go-sqlite3"
 
 	"github.com/crestonbunch/gobot"
 	"github.com/nlopes/slack"
@@ -23,8 +26,20 @@ func main() {
 	}
 	defer i.Close()
 
-	bot := gobot.New()
-	go bot.Start()
+	db, err := sql.Open("sqlite3", "./games.db")
+	if err != nil {
+		panic(err)
+	}
+	bot, err := gobot.New(db)
+	if err != nil {
+		panic(err)
+	}
+	defer bot.Close()
+
+	err = bot.Start()
+	if err != nil {
+		panic(err)
+	}
 	go i.StartReceiving(bot)
 	go i.StartSending(bot)
 

@@ -5,7 +5,7 @@ import "errors"
 // GameLocator describes rules for picking which game a command should
 // be sent to. Either pick a specific game, or pick the game automatically,
 type GameLocator struct {
-	GameID int
+	GameID int64
 	Auto   bool
 }
 
