@@ -16,9 +16,8 @@ Or put it in your ~/.bashrc file (or wherever you put env variables)
 
 ## Run
 
-From the project directory after cloning the repo
-
-    go run ./slack/main.go
+    go install github.com/crestonbunch/gobot/gobot
+    gobot
 
 ## Precommit
 
@@ -40,13 +39,13 @@ and make sure `pcg` is in your path
 * Communicating with slack
 * Vote timer
 * Persistence
+* End game
 
 ### Todo
 
 * `@gobot score`
 * `@gobot show`
 * `@gobot list`
-* End game
 
 Stretch goals
 

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"regexp"
 	"strconv"
-	"time"
 )
 
 // StartRegex matches a start command
@@ -30,6 +29,28 @@ var PlayRegex = regexp.MustCompile("^play$")
 
 // GamePlayRegex matches a play command for a specific game
 var GamePlayRegex = regexp.MustCompile("^play ([0-9]+)$")
+
+// Locator describes rules for picking which session a command should
+// be sent to. Either pick a specific session, or pick the session
+// automatically.
+type Locator struct {
+	ID   int64
+	Auto bool
+}
+
+// Find a session from a store
+func (loc Locator) Find(str Store) (*Session, error) {
+	if loc.Auto {
+		return str.Last()
+	}
+	return str.Get(loc.ID)
+}
+
+// Blueprint describes the rules for a new game
+type Blueprint struct {
+	Players Players
+	Voting  Voting
+}
 
 // ParseCommand parses a command from an input string
 func ParseCommand(input string) (Command, error) {
@@ -73,29 +94,18 @@ func parseStartCommand(players []string) (*StartCommand, error) {
 	// Two players only
 	case 2:
 		return &StartCommand{
-			Players: Players{
-				Black: []string{players[0]},
-				White: []string{players[1]},
-			},
-			Settings: Settings{
-				Vote: false,
-			},
+			Anyone: false,
+			Black:  []string{players[0]},
+			White:  []string{players[1]},
 		}, nil
 	// Allow anyone to vote for moves
 	case 0:
 		return &StartCommand{
-			Players: Players{
-				Anyone: true,
-			},
-			Settings: Settings{
-				Vote:  true,
-				Timer: 3600 * time.Second, // 1 hour
-			},
+			Anyone: true,
 		}, nil
 	default:
 		return nil, fmt.Errorf("incorrect number of players")
 	}
-
 }
 
 func parseCoordinates(coords string) (Coords, error) {
@@ -123,8 +133,8 @@ func parseMoveCommand(args []string) (*MoveCommand, error) {
 	}
 	if args[0] == "pass" {
 		return &MoveCommand{
-			Pass:    true,
-			Locator: GameLocator{Auto: true},
+			Move:    &Move{Pass: true},
+			Locator: Locator{Auto: true},
 		}, nil
 	}
 	coords, err := parseCoordinates(args[0])
@@ -132,8 +142,8 @@ func parseMoveCommand(args []string) (*MoveCommand, error) {
 		return nil, err
 	}
 	return &MoveCommand{
-		Coordinates: coords,
-		Locator:     GameLocator{Auto: true},
+		Move:    &Move{Coords: coords},
+		Locator: Locator{Auto: true},
 	}, nil
 }
 
@@ -147,8 +157,8 @@ func parseGameMoveCommand(args []string) (*MoveCommand, error) {
 	}
 	if args[1] == "pass" {
 		return &MoveCommand{
-			Pass:    true,
-			Locator: GameLocator{GameID: gameID},
+			Move:    &Move{Pass: true},
+			Locator: Locator{ID: gameID},
 		}, nil
 	}
 	coords, err := parseCoordinates(args[1])
@@ -156,8 +166,8 @@ func parseGameMoveCommand(args []string) (*MoveCommand, error) {
 		return nil, err
 	}
 	return &MoveCommand{
-		Coordinates: coords,
-		Locator:     GameLocator{GameID: gameID},
+		Move:    &Move{Coords: coords},
+		Locator: Locator{ID: gameID},
 	}, nil
 }
 
@@ -181,7 +191,7 @@ func parseGameVoteCommand(args []string) (*VoteCommand, error) {
 
 func parsePlayCommand(args []string) (*PlayCommand, error) {
 	return &PlayCommand{
-		Locator: GameLocator{Auto: true},
+		Locator: Locator{Auto: true},
 	}, nil
 }
 
@@ -194,6 +204,6 @@ func parseGamePlayCommand(args []string) (*PlayCommand, error) {
 		return nil, err
 	}
 	return &PlayCommand{
-		Locator: GameLocator{GameID: gameID},
+		Locator: Locator{ID: gameID},
 	}, nil
 }

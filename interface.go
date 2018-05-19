@@ -1,131 +1,99 @@
+//go:generate mockgen -destination=mocks/store.go -package=mocks -source=interface.go
+
 package gobot
 
 import (
 	"fmt"
-	"image"
-	"image/png"
-	"io/ioutil"
-	"os"
-	"regexp"
-	"strings"
-
-	"github.com/nlopes/slack"
+	"strconv"
+	"time"
 )
 
-// SlackInterface controls the bot through a slack channel
-type SlackInterface struct {
-	BotID   string
-	Channel string
-	API     *slack.Client
-	RTM     *slack.RTM
-	Command chan string
-	Stop    chan bool
+// A Move is a move that can be made in a game
+type Move struct {
+	Pass   bool
+	Coords Coords
 }
 
-// NewSlackInterface connects to slack and sets up an interface.
-func NewSlackInterface(api *slack.Client) (*SlackInterface, error) {
-	identity, err := api.AuthTest()
-	if err != nil {
-		return nil, err
+// String implements the stringer interface
+func (m Move) String() string {
+	if m.Pass {
+		return "pass"
 	}
-	rtm := api.NewRTM()
-
-	return &SlackInterface{
-		BotID:   identity.UserID,
-		API:     api,
-		RTM:     rtm,
-		Command: make(chan string),
-		Stop:    make(chan bool),
-	}, nil
+	return fmt.Sprintf("move at %s", m.Coords.String())
 }
 
-// Close go channels and open connections
-func (i *SlackInterface) Close() {
+// Coords represents a board coordinate in (x, y) values
+type Coords [2]int
+
+// String implements the stringer interface
+func (c Coords) String() string {
+	letter := string(c[1] + 'A')
+	number := strconv.Itoa(c[0] + 1)
+	return letter + number
 }
 
-// Block the current goroutine until the stop signal is received
-func (i *SlackInterface) Block() bool {
-	return <-i.Stop
+// Votable implements something that can save and recall votes
+type Votable interface {
+	// Vote for a move
+	Vote(*Move) error
+	// Schedule starts a vote timer, and resets any existing timer
+	Schedule() *time.Timer
+	// Block until the vote timer is up
+	Block()
+	// Random picks random vote
+	Random() (*Move, error)
+	// Empty returns true if no votes have been cast
+	Empty() bool
+	// Reset the votes made
+	Reset() error
+	// Whether or not voting is required
+	Required() bool
 }
 
-func (i *SlackInterface) sendText(text string) {
-	params := slack.PostMessageParameters{}
-	i.API.PostMessage(i.Channel, text, params)
+// Storable implements something that can be serialized and loaded by ID
+type Storable interface {
+	// Return a unique identifier for this storable
+	ID() int64
+	// Load the contents of a byte array into this storable
+	Load([]byte) error
+	// Serialize this game to a byte array
+	Save() ([]byte, error)
 }
 
-func (i *SlackInterface) sendImage(im image.Image, name, details string) {
-	temp, err := ioutil.TempFile("", "gobot")
-	if err != nil {
-		i.sendText("could not save image")
-		return
-	}
-	defer os.Remove(temp.Name())
-	png.Encode(temp, im)
-	file := &slack.FileUploadParameters{
-		Title:          name,
-		File:           temp.Name(),
-		Channels:       []string{i.Channel},
-		InitialComment: details,
-	}
-	_, err = i.API.UploadFile(*file)
-	if err != nil {
-		i.sendText(fmt.Sprintf("error uploading image %s", err.Error()))
-	}
+// Playable implements something that players play
+type Playable interface {
+	// Check if a player is participating in a game
+	IsPlaying(playerID string) bool
+	// Check if a player can make the next move
+	CanMove(playerID string) bool
 }
 
-func (i *SlackInterface) sendGame(g *Game, details string) {
-	im, _ := Render(g.Board())
-	name := fmt.Sprintf("Game %d", g.ID)
-	i.sendImage(im, name, details)
+// A Game interface for a game
+type Game interface {
+	// Get the current game board
+	Board() Board
+	// Check if the game is finished
+	Finished() bool
+	// Play a move
+	Move(*Move) error
+	// Whether or not a move is valid to play next
+	Validate(*Move) bool
 }
 
-// IsSlackCommand checks if the command is for the slack bot
-func (i *SlackInterface) IsSlackCommand(input string) bool {
-	return strings.HasPrefix(input, "<@"+i.BotID+"> ")
-}
-
-// ConvertSlackCommand sanitizes input from slack into a standard format
-// to be consumed by the gobot.
-func (i *SlackInterface) ConvertSlackCommand(input string) string {
-	re := regexp.MustCompile("<@([^>]+)>")
-	// strip leading @gobot command
-	output := strings.Replace(input, "<@"+i.BotID+"> ", "", 1)
-	// sanitize @user substrings
-	output = re.ReplaceAllString(output, "$1")
-	return output
-}
-
-// StartSending replies received along the reply channel
-func (i *SlackInterface) StartSending(server *Server) {
-	for r := range server.Replies {
-		if r == nil {
-			continue
-		}
-		if r.Game != nil {
-			i.sendGame(r.Game, r.Details)
-		} else {
-			i.sendText(r.Text)
-		}
-	}
-}
-
-// StartReceiving commands from the Slack client
-func (i *SlackInterface) StartReceiving(server *Server) {
-	go i.RTM.ManageConnection()
-
-	for msg := range i.RTM.IncomingEvents {
-		switch ev := msg.Data.(type) {
-		case *slack.MemberJoinedChannelEvent:
-			i.Channel = ev.Channel
-		case *slack.MessageEvent:
-			if ev.SubType == "" && i.IsSlackCommand(ev.Text) {
-				i.Channel = ev.Channel
-				command := i.ConvertSlackCommand(ev.Text)
-				err := server.Handle(command, ev.User)
-				if err != nil {
-					i.sendText(err.Error())
-				}
-			}
-		}
-	}
+// Store is an interface for something that can be used to store games.
+type Store interface {
+	// Close the store connection
+	Close() error
+	// Load the store from a storage backend
+	Load() error
+	// Get a particular session by id
+	Get(id int64) (*Session, error)
+	// Create a new session from a blueprint
+	New(Blueprint) (*Session, error)
+	// Return the last session played
+	Last() (*Session, error)
+	// Save a storable to storage
+	Save(Storable) error
+	// List active sessions, optionally listing all sessions
+	List(all bool) ([]*Session, error)
 }

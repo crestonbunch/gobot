@@ -2,8 +2,8 @@ package gobot
 
 // Response is a response to a command. It can contain text or a game state.
 type Response struct {
+	Session *Session
 	Text    string
-	Game    *Game
 	Details string
 }
 
@@ -12,7 +12,7 @@ func NewTextResponse(text string) *Response {
 	return &Response{Text: text}
 }
 
-// NewGameResponse builds a game response
-func NewGameResponse(game *Game, details string) *Response {
-	return &Response{Game: game, Details: details}
+// NewSessionResponse builds a session response
+func NewSessionResponse(s *Session, details string) *Response {
+	return &Response{Session: s, Details: details}
 }

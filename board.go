@@ -21,6 +21,17 @@ type Stone int8
 // Board is the state of the current game
 type Board [][]Stone
 
+// History stores the entire history of a game
+type History []Board
+
+// Ko checks if the given board state is the same as the previous board state
+func (h History) Ko(b Board) bool {
+	if len(h) < 2 {
+		return false
+	}
+	return b.Equals(h[len(h)-2])
+}
+
 // New19by19Board creates an empty 19x19 board
 func New19by19Board() Board {
 	stones := [][]Stone{}

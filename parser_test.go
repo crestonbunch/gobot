@@ -1,9 +1,10 @@
-package gobot
+package gobot_test
 
 import (
 	"reflect"
 	"testing"
-	"time"
+
+	. "github.com/crestonbunch/gobot"
 )
 
 func TestParseBadCommands(t *testing.T) {
@@ -28,18 +29,14 @@ func TestParseStartCommand(t *testing.T) {
 		{
 			input: "start",
 			command: &StartCommand{
-				Players:  Players{Anyone: true},
-				Settings: Settings{Vote: true, Timer: 3600 * time.Second},
+				Anyone: true,
 			},
 		}, {
 			input: "start USER1 USER2",
 			command: &StartCommand{
-				Players: Players{
-					Black:  []string{"USER1"},
-					White:  []string{"USER2"},
-					Anyone: false,
-				},
-				Settings: Settings{},
+				Black:  []string{"USER1"},
+				White:  []string{"USER2"},
+				Anyone: false,
 			},
 		}, {
 			input:   "start user1 user2 user3",
@@ -80,26 +77,26 @@ func TestParseMoveCommand(t *testing.T) {
 		{
 			input: "move A4",
 			command: &MoveCommand{
-				Coordinates: [2]int{3, 0},
-				Locator:     GameLocator{Auto: true},
+				Move:    &Move{Coords: [2]int{3, 0}},
+				Locator: Locator{Auto: true},
 			},
 		}, {
 			input: "move 12 D14",
 			command: &MoveCommand{
-				Coordinates: [2]int{13, 3},
-				Locator:     GameLocator{GameID: 12},
+				Move:    &Move{Coords: [2]int{13, 3}},
+				Locator: Locator{ID: 12},
 			},
 		}, {
 			input: "move pass",
 			command: &MoveCommand{
-				Pass:    true,
-				Locator: GameLocator{Auto: true},
+				Move:    &Move{Pass: true},
+				Locator: Locator{Auto: true},
 			},
 		}, {
 			input: "move 12 pass",
 			command: &MoveCommand{
-				Pass:    true,
-				Locator: GameLocator{GameID: 12},
+				Move:    &Move{Pass: true},
+				Locator: Locator{ID: 12},
 			},
 		}, {
 			input:   "move 12 Z14",
@@ -142,26 +139,26 @@ func TestParseVoteCommand(t *testing.T) {
 		{
 			input: "vote A4",
 			command: &VoteCommand{
-				Coordinates: [2]int{3, 0},
-				Locator:     GameLocator{Auto: true},
+				Move:    &Move{Coords: [2]int{3, 0}},
+				Locator: Locator{Auto: true},
 			},
 		}, {
 			input: "vote 12 D14",
 			command: &VoteCommand{
-				Coordinates: [2]int{13, 3},
-				Locator:     GameLocator{GameID: 12},
+				Move:    &Move{Coords: [2]int{13, 3}},
+				Locator: Locator{ID: 12},
 			},
 		}, {
 			input: "vote pass",
 			command: &VoteCommand{
-				Pass:    true,
-				Locator: GameLocator{Auto: true},
+				Move:    &Move{Pass: true},
+				Locator: Locator{Auto: true},
 			},
 		}, {
 			input: "vote 12 pass",
 			command: &VoteCommand{
-				Pass:    true,
-				Locator: GameLocator{GameID: 12},
+				Move:    &Move{Pass: true},
+				Locator: Locator{ID: 12},
 			},
 		}, {
 			input:   "vote 12 Z14",
