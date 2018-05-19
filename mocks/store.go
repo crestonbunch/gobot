@@ -5,10 +5,11 @@
 package mocks
 
 import (
-	gobot "github.com/crestonbunch/gobot"
-	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
 	time "time"
+
+	gobot "github.com/crestonbunch/gobot"
+	gomock "github.com/golang/mock/gomock"
 )
 
 // MockVotable is a mock of Votable interface
