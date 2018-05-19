@@ -30,6 +30,18 @@ var PlayRegex = regexp.MustCompile("^play$")
 // GamePlayRegex matches a play command for a specific game
 var GamePlayRegex = regexp.MustCompile("^play ([0-9]+)$")
 
+// ShowRegex matches a show command
+var ShowRegex = regexp.MustCompile("^show$")
+
+// GameShowRegex matches a show command for a specific game
+var GameShowRegex = regexp.MustCompile("^show ([0-9]+)$")
+
+// ListRegex matches a list command
+var ListRegex = regexp.MustCompile("^list$")
+
+// ListAllRegex matches a list all command
+var ListAllRegex = regexp.MustCompile("^list all$")
+
 // Locator describes rules for picking which session a command should
 // be sent to. Either pick a specific session, or pick the session
 // automatically.
@@ -84,7 +96,21 @@ func ParseCommand(input string) (Command, error) {
 	}
 	if GamePlayRegex.MatchString(input) {
 		matches := GamePlayRegex.FindStringSubmatch(input)
-		return parsePlayCommand(matches[1:])
+		return parseGamePlayCommand(matches[1:])
+	}
+	if ShowRegex.MatchString(input) {
+		matches := ShowRegex.FindStringSubmatch(input)
+		return parseShowCommand(matches[1:])
+	}
+	if GameShowRegex.MatchString(input) {
+		matches := GameShowRegex.FindStringSubmatch(input)
+		return parseGameShowCommand(matches[1:])
+	}
+	if ListRegex.MatchString(input) {
+		return parseListRegex()
+	}
+	if ListAllRegex.MatchString(input) {
+		return parseListAllRegex()
 	}
 	return nil, fmt.Errorf("%s not understood", input)
 }
@@ -206,4 +232,31 @@ func parseGamePlayCommand(args []string) (*PlayCommand, error) {
 	return &PlayCommand{
 		Locator: Locator{ID: gameID},
 	}, nil
+}
+
+func parseShowCommand(args []string) (*ShowCommand, error) {
+	return &ShowCommand{
+		Locator: Locator{Auto: true},
+	}, nil
+}
+
+func parseGameShowCommand(args []string) (*ShowCommand, error) {
+	if len(args) < 1 {
+		return nil, fmt.Errorf("missing game id")
+	}
+	gameID, err := strconv.ParseInt(args[0], 10, 64)
+	if err != nil {
+		return nil, err
+	}
+	return &ShowCommand{
+		Locator: Locator{ID: gameID},
+	}, nil
+}
+
+func parseListRegex() (*ListCommand, error) {
+	return &ListCommand{}, nil
+}
+
+func parseListAllRegex() (*ListCommand, error) {
+	return &ListCommand{All: true}, nil
 }

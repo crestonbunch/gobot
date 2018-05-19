@@ -7,11 +7,13 @@ type Request struct {
 	Store   Store
 	Command Command
 	Session *Session
+	List    []*Session
 	Player  string
 }
 
 // NewRequest constructs a request from a user command and session store
 func NewRequest(cmd Command, player string, str Store) (*Request, error) {
+	var list []*Session
 	var sess *Session
 	var err error
 	switch cmd := cmd.(type) {
@@ -34,6 +36,10 @@ func NewRequest(cmd Command, player string, str Store) (*Request, error) {
 		sess, err = cmd.Locator.Find(str)
 	case *PlayCommand:
 		sess, err = cmd.Locator.Find(str)
+	case *ShowCommand:
+		sess, err = cmd.Locator.Find(str)
+	case *ListCommand:
+		list, err = str.List(cmd.All)
 	}
 	if err != nil {
 		return nil, err
@@ -43,6 +49,7 @@ func NewRequest(cmd Command, player string, str Store) (*Request, error) {
 		Store:   str,
 		Command: cmd,
 		Session: sess,
+		List:    list,
 		Player:  player,
 	}, nil
 }

@@ -54,13 +54,18 @@ func (i *SlackInterface) sendText(text string) {
 }
 
 func (i *SlackInterface) sendImage(im image.Image, name, details string) {
+	i.sendText("please hold...")
 	temp, err := ioutil.TempFile("", "gobot")
 	if err != nil {
 		i.sendText("could not save image")
 		return
 	}
 	defer os.Remove(temp.Name())
-	png.Encode(temp, im)
+	err = png.Encode(temp, im)
+	if err != nil {
+		i.sendText("could encode png image")
+		return
+	}
 	file := &slack.FileUploadParameters{
 		Title:          name,
 		File:           temp.Name(),

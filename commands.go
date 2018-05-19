@@ -1,5 +1,10 @@
 package gobot
 
+import (
+	"fmt"
+	"strings"
+)
+
 // Command issues a command and returns a response
 type Command interface {
 	Execute(*Request) (*Response, error)
@@ -44,4 +49,33 @@ type PlayCommand struct {
 // Execute a play command to make a move
 func (c *PlayCommand) Execute(r *Request) (*Response, error) {
 	return PlayPipeline.Run(r.Session, r.Player, nil)
+}
+
+// ShowCommand is a command to show the game board
+type ShowCommand struct {
+	Locator Locator
+}
+
+// Execute a play command to make a move
+func (c *ShowCommand) Execute(r *Request) (*Response, error) {
+	return ShowPipeline.Run(r.Session, r.Player, nil)
+}
+
+// ListCommand is a command to list available games
+type ListCommand struct {
+	All bool
+}
+
+// Execute a list command to show games
+func (c *ListCommand) Execute(r *Request) (*Response, error) {
+	list := []string{}
+	for _, sess := range r.List {
+		id := sess.Storable.ID()
+		fin := sess.Game.Finished()
+		list = append(list, fmt.Sprintf("%d: finished: %t", id, fin))
+	}
+	if len(list) == 0 {
+		return NewTextResponse("no games found"), nil
+	}
+	return NewTextResponse(strings.Join(list, "\n")), nil
 }

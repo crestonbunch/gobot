@@ -25,7 +25,9 @@ func (p Pipeline) Run(s *Session, player string, m *Move) (*Response, error) {
 }
 
 // InitializerPipeline executes the steps to initialize a game
-var InitializerPipeline = Pipeline{}
+var InitializerPipeline = Pipeline{
+	handleShow,
+}
 
 // MovePipeline executes the steps to make a move in a game
 var MovePipeline = Pipeline{
@@ -49,6 +51,11 @@ var VotePipeline = Pipeline{
 var PlayPipeline = Pipeline{
 	handleSchedule,
 	handlePlay,
+}
+
+// ShowPipeline executes the steps to show a game
+var ShowPipeline = Pipeline{
+	handleShow,
 }
 
 func requireAuth(s *Session, player string, m *Move) (*Response, error) {
@@ -113,4 +120,8 @@ func handlePlay(s *Session, player string, m *Move) (*Response, error) {
 	}
 	details := fmt.Sprintf("voted to %s", vote.String())
 	return NewSessionResponse(s, details), s.Game.Move(vote)
+}
+
+func handleShow(s *Session, player string, m *Move) (*Response, error) {
+	return NewSessionResponse(s, ""), nil
 }

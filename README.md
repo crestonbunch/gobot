@@ -34,6 +34,8 @@ and make sure `pcg` is in your path
 * `@gobot play`
 * `@gobot move`
 * `@gobot pass`
+* `@gobot show`
+* `@gobot list`
 * Encoding game state and rules
 * Rendering image
 * Communicating with slack
@@ -44,8 +46,7 @@ and make sure `pcg` is in your path
 ### Todo
 
 * `@gobot score`
-* `@gobot show`
-* `@gobot list`
+* Code health, refactoring
 
 Stretch goals
 

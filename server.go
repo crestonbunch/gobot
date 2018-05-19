@@ -46,7 +46,10 @@ func (s *Server) Handle(input, player string) error {
 		return err
 	}
 	s.Replies <- response
-	return s.Save(req.Session.Storable)
+	if req.Session != nil {
+		return s.Save(req.Session.Storable)
+	}
+	return nil
 }
 
 // Close implements the Storable interface

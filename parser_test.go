@@ -191,3 +191,119 @@ func TestParseVoteCommand(t *testing.T) {
 		}
 	}
 }
+
+func TestParsePlayCommand(t *testing.T) {
+	cases := []struct {
+		input   string
+		command *PlayCommand
+		err     bool
+	}{
+		{
+			input: "play",
+			command: &PlayCommand{
+				Locator: Locator{Auto: true},
+			},
+		}, {
+			input: "play 12",
+			command: &PlayCommand{
+				Locator: Locator{ID: 12},
+			},
+		},
+	}
+
+	for _, test := range cases {
+		actual, err := ParseCommand(test.input)
+		if err == nil && test.err {
+			t.Errorf("expected %s to make an error", test.input)
+		} else if err != nil && !test.err {
+			t.Errorf(
+				"%s triggered unexpected error %s", test.input, err.Error(),
+			)
+		} else if actual == nil && test.command != nil {
+			t.Errorf("%s returned unexepected nil", test.input)
+		} else if actual != nil && test.command != nil {
+			if !reflect.DeepEqual(actual, test.command) {
+				t.Errorf(
+					"%s\n%#v\nbut expected\n%#v\n",
+					test.input, actual, test.command,
+				)
+			}
+		}
+	}
+}
+
+func TestParseShowCommand(t *testing.T) {
+	cases := []struct {
+		input   string
+		command *ShowCommand
+		err     bool
+	}{
+		{
+			input: "show",
+			command: &ShowCommand{
+				Locator: Locator{Auto: true},
+			},
+		}, {
+			input: "show 12",
+			command: &ShowCommand{
+				Locator: Locator{ID: 12},
+			},
+		},
+	}
+
+	for _, test := range cases {
+		actual, err := ParseCommand(test.input)
+		if err == nil && test.err {
+			t.Errorf("expected %s to make an error", test.input)
+		} else if err != nil && !test.err {
+			t.Errorf(
+				"%s triggered unexpected error %s", test.input, err.Error(),
+			)
+		} else if actual == nil && test.command != nil {
+			t.Errorf("%s returned unexepected nil", test.input)
+		} else if actual != nil && test.command != nil {
+			if !reflect.DeepEqual(actual, test.command) {
+				t.Errorf(
+					"%s\n%#v\nbut expected\n%#v\n",
+					test.input, actual, test.command,
+				)
+			}
+		}
+	}
+}
+
+func TestParseListCommand(t *testing.T) {
+	cases := []struct {
+		input   string
+		command *ListCommand
+		err     bool
+	}{
+		{
+			input:   "list",
+			command: &ListCommand{},
+		}, {
+			input:   "list all",
+			command: &ListCommand{All: true},
+		},
+	}
+
+	for _, test := range cases {
+		actual, err := ParseCommand(test.input)
+		if err == nil && test.err {
+			t.Errorf("expected %s to make an error", test.input)
+		} else if err != nil && !test.err {
+			t.Errorf(
+				"%s triggered unexpected error %s", test.input, err.Error(),
+			)
+		} else if actual == nil && test.command != nil {
+			t.Errorf("%s returned unexepected nil", test.input)
+		} else if actual != nil && test.command != nil {
+			if !reflect.DeepEqual(actual, test.command) {
+				t.Errorf(
+					"%s\n%#v\nbut expected\n%#v\n",
+					test.input, actual, test.command,
+				)
+			}
+		}
+	}
+}
